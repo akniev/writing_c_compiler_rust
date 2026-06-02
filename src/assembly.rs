@@ -1,5 +1,4 @@
 use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram};
-use crate::lexer_tokens::LexerToken;
 use crate::parser_tokens::{ASTExpression, ASTProgram, ASTStatement};
 
 pub fn generate_assembly(program: ASTProgram) -> ASMProgram {
@@ -15,7 +14,7 @@ fn asm_instructions(body: ASTStatement) -> Vec<ASMInstruction> {
         ASTStatement::Return(exp) => {
             let value = match exp {
                 ASTExpression::Constant(value) => value,
-                _ => unreachable!("expected constant, found {exp:?}"),
+                //_ => unreachable!("expected constant, found {exp:?}"),
             };
             let src = ASMOperand::Imm(value);
             let dst = ASMOperand::Register;

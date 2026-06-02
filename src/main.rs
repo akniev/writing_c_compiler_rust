@@ -4,9 +4,12 @@ mod parser;
 mod parser_tokens;
 mod assembly;
 mod assembly_tokens;
+mod code_emission;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
+use std::path::Path;
+use std::process::Command;
 
 #[derive(Parser, Debug)]
 #[command(about = "C compiler arguments parser")]
@@ -34,6 +37,9 @@ struct Args {
     #[arg(long)]
     compile: bool,
 
+    #[arg(long)]
+    c: bool,
+
     input: String,
 }
 
@@ -46,19 +52,49 @@ fn main() {
     if args.lex {
         let tokens = lexer::tokenize(input_str);
         println!("{:?}", tokens);
-    }
-
-    if args.parse {
+    } else if args.parse {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
         println!("{:?}", program);
-    }
-
-    if args.codegen {
+    } else if args.codegen {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
         let assembly = assembly::generate_assembly(program);
         println!("{:?}", assembly);
+    } else {
+        let tokens = lexer::tokenize(input_str);
+        let program = parser::parse(tokens).unwrap();
+        let assembly = assembly::generate_assembly(program);
+        let code = code_emission::generate_code(assembly);
+        println!("{}", code);
+
+        let path = Path::new(&args.input);
+        let asm_file = path.with_extension("s");
+        let out_file = path.with_extension("");
+
+        fs::write(&asm_file, code).expect("Failed to write assembly file");
+
+        let output = if args.c {
+            Command::new("gcc")
+                .args(["-c"])
+                .arg(&asm_file)
+                .arg("-o")
+                .arg(&out_file.with_extension("o"))
+                .output()
+        } else {
+            Command::new("gcc")
+                .arg(&asm_file)
+                .arg("-o")
+            .arg(&out_file)
+            .output()
+        }.expect("Failed to execute command");
+
+        if output.status.success() {
+            println!("Compilation successful");
+        } else {
+            println!("Compilation failed");
+            println!("{}", String::from_utf8_lossy(&output.stderr));
+        }
     }
 }
 

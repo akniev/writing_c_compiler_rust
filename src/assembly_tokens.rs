@@ -27,3 +27,12 @@ pub enum ASMOperand {
     Imm(i32),
     Register,
 }
+
+impl ASMOperand {
+    pub fn to_string(&self) -> String {
+        match self {
+            ASMOperand::Imm(value) => format!("${}", value),
+            ASMOperand::Register => String::from("%eax"),
+        }
+    }
+}
