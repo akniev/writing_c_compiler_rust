@@ -1,5 +1,7 @@
-mod token;
+mod lexer_tokens;
 mod lexer;
+mod parser;
+mod parser_tokens;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
@@ -36,8 +38,22 @@ struct Args {
 fn main() {
     let args = Args::parse();
     println!("{args:?}");
-    let input_content = fs::read_to_string(args.input).expect("Failed to read input file");
-    let input = input_content.as_str();
-    let tokens = lexer::tokenize(input);
-    println!("{:?}", tokens);
+    let input = read_file(&args.input);
+    let input_str = input.as_str();
+
+    if args.lex {
+        let tokens = lexer::tokenize(input_str);
+        println!("{:?}", tokens);
+    }
+
+    if args.parse {
+        let tokens = lexer::tokenize(input_str);
+        let program = parser::parse(tokens).unwrap();
+        println!("{:?}", program);
+    }
+}
+
+fn read_file(path: &str) -> String {
+    let input_content = fs::read_to_string(path).expect("Failed to read input file");
+    input_content
 }

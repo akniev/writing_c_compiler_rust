@@ -1,6 +1,6 @@
-use crate::token::{Token, TokenKind, TOKEN_KINDS};
+use crate::lexer_tokens::{LexerToken, LexerTokenKind, LEXER_TOKEN_KINDS};
 
-pub fn tokenize(input: &str) -> Vec<Token> {
+pub fn tokenize(input: &str) -> Vec<LexerToken> {
     let mut tokens = Vec::new();
     let mut cursor = 0;
     while cursor < input.len() {
@@ -13,13 +13,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             continue;
         }
 
-        let mut best_match: Option<(TokenKind, usize)> = None;
-        for token_kind in TOKEN_KINDS {
+        let mut best_match: Option<(LexerTokenKind, usize)> = None;
+        for token_kind in LEXER_TOKEN_KINDS {
             let pattern = token_kind.pattern();
             if let Some(found) = pattern.find(remaining) {
                 if found.start() == 0 {
                     let length = found.end();
-                    if best_match.as_ref().is_none_or(|(_, best_length)| length > *best_length) {
+                    if best_match.as_ref().is_none_or(|(_, best_length)| length >= *best_length) {
                         best_match = Some((*token_kind, length));
                     }
                 }
@@ -36,7 +36,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
 
     // Remove comments and compiler directives
-    tokens.retain(|token| !matches!(token, Token::Comment | Token::CompilerDirective));
+    tokens.retain(|token| !matches!(token, LexerToken::Comment | LexerToken::CompilerDirective));
 
     return tokens;
 }
