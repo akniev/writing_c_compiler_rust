@@ -4,25 +4,25 @@ program = Program(function_definition)
 function_definition = Function(identifier name, statement body)
 statement = Return(exp)
 exp = Constant(int)
-*/
+ */
 
 #[derive(Debug, PartialEq)]
-pub struct ASTProgramToken {
-    pub function_definition: ASTFunctionDefinitionToken,
+pub struct ASTProgram {
+    pub function_definition: ASTFunctionDefinition,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ASTFunctionDefinitionToken {
+pub struct ASTFunctionDefinition {
     pub name: String,
-    pub body: ASTStatementToken
+    pub body: ASTStatement
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ASTStatementToken {
-    Return(ASTExpressionToken)
+pub enum ASTStatement {
+    Return(ASTExpression)
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ASTExpressionToken {
+pub enum ASTExpression {
     Constant(i32)
 }

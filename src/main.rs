@@ -2,6 +2,8 @@ mod lexer_tokens;
 mod lexer;
 mod parser;
 mod parser_tokens;
+mod assembly;
+mod assembly_tokens;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
@@ -50,6 +52,13 @@ fn main() {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
         println!("{:?}", program);
+    }
+
+    if args.codegen {
+        let tokens = lexer::tokenize(input_str);
+        let program = parser::parse(tokens).unwrap();
+        let assembly = assembly::generate_assembly(program);
+        println!("{:?}", assembly);
     }
 }
 

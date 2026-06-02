@@ -1,5 +1,5 @@
 use crate::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser_tokens::{ASTExpressionToken, ASTFunctionDefinitionToken, ASTProgramToken, ASTStatementToken};
+use crate::parser_tokens::{ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement};
 
 /*
 <program> ::= <function>
@@ -8,7 +8,7 @@ use crate::parser_tokens::{ASTExpressionToken, ASTFunctionDefinitionToken, ASTPr
 <exp> ::= <int>
 <identifier> ::= ? An identifier token ?
 <int> ::= ? A constant token ?
-*/
+ */
 
 struct Parser {
     tokens: Vec<LexerToken>,
@@ -35,7 +35,7 @@ impl Parser {
     //     self.tokens.get(self.cursor).cloned()
     // }
 
-    fn parse_function(&mut self) -> Result<ASTFunctionDefinitionToken, String> {
+    fn parse_function(&mut self) -> Result<ASTFunctionDefinition, String> {
         self.expect(LexerTokenKind::Int)?;
         let name_token = self.expect(LexerTokenKind::Identifier)?;
         let name = match name_token {
@@ -48,31 +48,31 @@ impl Parser {
         self.expect(LexerTokenKind::OpenBrace)?;
         let statement = self.parse_statement()?;
         self.expect(LexerTokenKind::CloseBrace)?;
-        Ok(ASTFunctionDefinitionToken { name, body: statement })
+        Ok(ASTFunctionDefinition { name, body: statement })
     }
 
-    fn parse_statement(&mut self) -> Result<ASTStatementToken, String> {
+    fn parse_statement(&mut self) -> Result<ASTStatement, String> {
         self.expect(LexerTokenKind::Return)?;
         let exp = self.parse_expression()?;
         self.expect(LexerTokenKind::Semicolon)?;
-        Ok(ASTStatementToken::Return(exp))
+        Ok(ASTStatement::Return(exp))
     }
 
-    fn parse_expression(&mut self) -> Result<ASTExpressionToken, String> {
+    fn parse_expression(&mut self) -> Result<ASTExpression, String> {
         let const_token = self.expect(LexerTokenKind::Const)?;
         let value = match const_token {
             LexerToken::Const(value) => value,
             _ => unreachable!("expected constant, found {const_token:?}"),
         };
-        Ok(ASTExpressionToken::Constant(value))
+        Ok(ASTExpression::Constant(value))
     }
 }
 
-pub fn parse(tokens: Vec<LexerToken>) -> Result<ASTProgramToken, String> {
+pub fn parse(tokens: Vec<LexerToken>) -> Result<ASTProgram, String> {
     let mut parser = Parser { tokens, cursor: 0 };
     let function_definition = parser.parse_function()?;
     if parser.cursor != parser.tokens.len() {
         return Err("unexpected tokens".to_string());
     }
-    Ok(ASTProgramToken { function_definition })
+    Ok(ASTProgram { function_definition })
 }
