@@ -5,6 +5,8 @@ mod parser_tokens;
 mod assembly;
 mod assembly_tokens;
 mod code_emission;
+mod tacky_tokens;
+mod tacky;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
@@ -61,6 +63,11 @@ fn main() {
         let program = parser::parse(tokens).unwrap();
         let assembly = assembly::generate_assembly(program);
         println!("{:?}", assembly);
+    } else if args.tacky {
+        let tokens = lexer::tokenize(input_str);
+        let program = parser::parse(tokens).unwrap();
+        let tacky_program = tacky::parse_tacky(program).unwrap();
+        println!("{:?}", tacky_program);
     } else {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
