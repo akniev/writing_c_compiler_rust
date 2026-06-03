@@ -12,6 +12,9 @@ pub enum LexerToken {
     OpenBrace,
     CloseBrace,
     Semicolon,
+    Tilde,
+    Hyphen,
+    Decrement,
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -29,6 +32,9 @@ pub enum LexerTokenKind {
     OpenBrace,
     CloseBrace,
     Semicolon,
+    Tilde,
+    Hyphen,
+    Decrement,
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -47,6 +53,9 @@ impl LexerToken {
             LexerToken::OpenBrace => LexerTokenKind::OpenBrace,
             LexerToken::CloseBrace => LexerTokenKind::CloseBrace,
             LexerToken::Semicolon => LexerTokenKind::Semicolon,
+            LexerToken::Tilde => LexerTokenKind::Tilde,
+            LexerToken::Hyphen => LexerTokenKind::Hyphen,
+            LexerToken::Decrement => LexerTokenKind::Decrement,
             LexerToken::Comment => LexerTokenKind::Comment,
             LexerToken::CompilerDirective => LexerTokenKind::CompilerDirective,
         }
@@ -66,6 +75,9 @@ impl LexerTokenKind {
             Self::OpenBrace => r"^\{",
             Self::CloseBrace => r"^\}",
             Self::Semicolon => r"^;",
+            Self::Tilde => r"^~",
+            Self::Hyphen => r"^-",
+            Self::Decrement => r"^--",
             Self::Comment => r"^(?://[^\r\n]*|/\*[\s\S]*?\*/)",
             Self::CompilerDirective => r"(?m)^#[^\r\n]*",
         }).expect("Invalid regex")
@@ -83,6 +95,9 @@ impl LexerTokenKind {
             LexerTokenKind::OpenBrace => LexerToken::OpenBrace,
             LexerTokenKind::CloseBrace => LexerToken::CloseBrace,
             LexerTokenKind::Semicolon => LexerToken::Semicolon,
+            LexerTokenKind::Tilde => LexerToken::Tilde,
+            LexerTokenKind::Hyphen => LexerToken::Hyphen,
+            LexerTokenKind::Decrement => LexerToken::Decrement,
             LexerTokenKind::Comment => LexerToken::Comment,
             LexerTokenKind::CompilerDirective => LexerToken::CompilerDirective,
         }
@@ -100,6 +115,9 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::OpenBrace,
     LexerTokenKind::CloseBrace,
     LexerTokenKind::Semicolon,
+    LexerTokenKind::Tilde,
+    LexerTokenKind::Hyphen,
+    LexerTokenKind::Decrement,
     LexerTokenKind::Comment,
     LexerTokenKind::CompilerDirective,
 ];
