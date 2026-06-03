@@ -1,11 +1,12 @@
 use crate::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser_tokens::{ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement};
+use crate::parser_tokens::{ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
 
 /*
 <program> ::= <function>
 <function> ::= "int" <identifier> "(" "void" ")" "{" <statement> "}"
 <statement> ::= "return" <exp> ";"
-<exp> ::= <int>
+<exp> ::= <int> | <unop> <exp> | "(" <exp> ")"
+<unop> ::= "-" | "~"
 <identifier> ::= ? An identifier token ?
 <int> ::= ? A constant token ?
  */
@@ -31,9 +32,9 @@ impl Parser {
         }
     }
 
-    // fn peek(&mut self) -> Option<LexerToken> {
-    //     self.tokens.get(self.cursor).cloned()
-    // }
+    fn peek(&mut self) -> Option<LexerToken> {
+        self.tokens.get(self.cursor).cloned()
+    }
 
     fn parse_function(&mut self) -> Result<ASTFunctionDefinition, String> {
         self.expect(LexerTokenKind::Int)?;
@@ -59,12 +60,40 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTExpression, String> {
-        let const_token = self.expect(LexerTokenKind::Const)?;
-        let value = match const_token {
-            LexerToken::Const(value) => value,
-            _ => unreachable!("expected constant, found {const_token:?}"),
-        };
-        Ok(ASTExpression::Constant(value))
+        let next_token = self.peek().ok_or("unexpected end of input")?;
+        match next_token {
+            LexerToken::Const(_) => {
+                let const_token = self.expect(LexerTokenKind::Const)?;
+                let value = match const_token {
+                    LexerToken::Const(value) => value,
+                    _ => unreachable!("expected constant, found {const_token:?}"),
+                };
+                Ok(ASTExpression::Constant(value))
+            }
+            LexerToken::Tilde | LexerToken::Hyphen => {
+                let operator = self.parse_unop()?;
+                let inner_exp = self.parse_expression()?;
+                Ok(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) })
+            }
+            LexerToken::OpenParen => {
+                self.expect(LexerTokenKind::OpenParen)?;
+                let exp = self.parse_expression()?;
+                self.expect(LexerTokenKind::CloseParen)?;
+                Ok(exp)
+            }
+            _ => {
+                Err("unexpected token".to_string())
+            }
+        }
+    }
+
+    fn parse_unop(&mut self) -> Result<ASTUnaryOperator, String> {
+        let next_token = self.take();
+        match next_token {
+            Some(LexerToken::Tilde) => Ok(ASTUnaryOperator::Complement),
+            Some(LexerToken::Hyphen) => Ok(ASTUnaryOperator::Negate),
+            _ => Err("unexpected token".to_string()),
+        }
     }
 }
 
