@@ -1,6 +1,5 @@
-use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
-use crate::parser_tokens::{ASTExpression, ASTProgram, ASTStatement};
-use crate::tacky_tokens::{TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
+use crate::tacky::tacky_tokens::{TInstruction, TProgram, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
     let function_definition = ASMFunctionDefinition {

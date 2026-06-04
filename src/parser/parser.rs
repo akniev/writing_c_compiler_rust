@@ -1,5 +1,5 @@
-use crate::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser_tokens::{ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
+use crate::parser::parser_tokens::{ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
 
 /*
 <program> ::= <function>

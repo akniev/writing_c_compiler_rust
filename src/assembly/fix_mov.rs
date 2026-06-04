@@ -1,4 +1,4 @@
-use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister};
+use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister};
 
 pub fn fix_movs_in_program(program: ASMProgram) -> ASMProgram {
     let n_function = fix_movs_in_function(program.function_definition);
@@ -18,7 +18,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
     match instruction.clone() {
         ASMInstruction::Mov { src, dst } => {
             match (src.clone(), dst.clone()) {
-                (ASMOperand::Stack(offset1), ASMOperand::Stack(offset2)) => {
+                (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
                     vec![
                         ASMInstruction::Mov { src, dst: ASMOperand::Reg(ASMRegister::R10) },
                         ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::R10), dst }
@@ -29,10 +29,10 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 }
             }
         }
-        ASMInstruction::Unary { unop, operand } => {
+        ASMInstruction::Unary { unop: _, operand: _ } => {
             vec![instruction]
         }
-        ASMInstruction::AllocateStack(size) => {
+        ASMInstruction::AllocateStack(_) => {
             vec![instruction]
         }
         ASMInstruction::Ret => {

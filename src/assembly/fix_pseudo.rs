@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::sync::atomic::{AtomicI32, Ordering};
-use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram};
+use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram};
 
 static STACK_OFFSETS: LazyLock<Mutex<HashMap<String, i32>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 static TEMP_COUNTER: AtomicI32 = AtomicI32::new(0);
@@ -44,7 +44,7 @@ fn fix_pseudo_in_operands(operand: ASMOperand) -> ASMOperand {
         ASMOperand::Imm(value) => ASMOperand::Imm(value),
         ASMOperand::Reg(reg) => ASMOperand::Reg(reg),
         ASMOperand::Pseudo(identifier) => {
-            let mut offsets = STACK_OFFSETS.lock().unwrap();;
+            let mut offsets = STACK_OFFSETS.lock().unwrap();
 
             if let Some(offset) = offsets.get(&identifier) {
                 return ASMOperand::Stack(*offset);

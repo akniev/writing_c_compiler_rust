@@ -1,4 +1,4 @@
-use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMProgram};
+use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMProgram};
 
 pub fn generate_code(asm: ASMProgram) -> String {
     let mut result = String::new();

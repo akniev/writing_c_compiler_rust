@@ -1,4 +1,4 @@
-use crate::lexer_tokens::{LexerToken, LexerTokenKind, LEXER_TOKEN_KINDS};
+use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind, LEXER_TOKEN_KINDS};
 
 pub fn tokenize(input: &str) -> Vec<LexerToken> {
     let mut tokens = Vec::new();

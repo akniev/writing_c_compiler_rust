@@ -9,7 +9,6 @@
  operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int)
  reg = AX | R10
  */
-use crate::tacky_tokens::TValue;
 
 #[derive(Debug, PartialEq)]
 pub struct ASMProgram {
@@ -56,7 +55,7 @@ impl ASMOperand {
             ASMOperand::Imm(value) => format!("${}", value),
             ASMOperand::Reg(reg) => reg.to_string(),
             ASMOperand::Stack(offset) => format!("-{}(%rbp)", offset),
-            ASMOperand::Pseudo(name) => {
+            ASMOperand::Pseudo(_) => {
                 panic!("Pseudo-operands shouldn't be used here");
             },
         }
