@@ -51,22 +51,32 @@ pub enum ASMRegister {
 }
 
 impl ASMOperand {
-    // pub fn to_string(&self) -> String {
-    //     match self {
-    //         ASMOperand::Imm(value) => format!("${}", value),
-    //         ASMOperand::Reg(reg) => reg.to_string(),
-    //
-    //     }
-    // }
-
-
+    pub fn to_string(&self) -> String {
+        match self {
+            ASMOperand::Imm(value) => format!("${}", value),
+            ASMOperand::Reg(reg) => reg.to_string(),
+            ASMOperand::Stack(offset) => format!("-{}(%rbp)", offset),
+            ASMOperand::Pseudo(name) => {
+                panic!("Pseudo-operands shouldn't be used here");
+            },
+        }
+    }
 }
 
 impl ASMRegister {
-    // pub fn to_string(&self) -> String {
-    //     match self {
-    //         ASMRegister::AX => String::from("%eax"),
-    //         ASMRegister::R10 => "R10".to_string(),
-    //     }
-    // }
+    pub fn to_string(&self) -> String {
+        match self {
+            ASMRegister::AX => String::from("%eax"),
+            ASMRegister::R10 => "%r10d".to_string(),
+        }
+    }
+}
+
+impl ASMUnaryOperator {
+    pub fn to_string(&self) -> String {
+        match self {
+            ASMUnaryOperator::Neg => "negl".to_string(),
+            ASMUnaryOperator::Not => "notl".to_string(),
+        }
+    }
 }
