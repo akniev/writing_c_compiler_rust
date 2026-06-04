@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use crate::parser_tokens::{ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky_tokens::{TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{LazyLock, Mutex};
 
 static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
 

@@ -19,12 +19,19 @@ fn print_function(function: ASMFunctionDefinition, result: &mut String) {
 }
 
 fn print_instruction(inst: ASMInstruction, result: &mut String) {
-    match inst {
-        ASMInstruction::Mov { src, dst } => {
-            result.push_str(&format!("  movl {}, {}\n", src.to_string(), dst.to_string()));
-        }
-        ASMInstruction::Ret => {
-            result.push_str("  ret\n");
-        }
-    }
+    todo!()
+    // match inst {
+    //     ASMInstruction::Mov { src, dst } => {
+    //         result.push_str(&format!("  movl {}, {}\n", src.to_string(), dst.to_string()));
+    //     }
+    //     ASMInstruction::Unary { unop, operand } => {
+    //         todo!()
+    //     }
+    //     ASMInstruction::AllocateStack(size) => {
+    //         todo!()
+    //     }
+    //     ASMInstruction::Ret => {
+    //         result.push_str("  ret\n");
+    //     }
+    // }
 }

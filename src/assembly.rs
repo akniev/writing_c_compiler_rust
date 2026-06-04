@@ -1,7 +1,8 @@
-use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram};
+use crate::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
 use crate::parser_tokens::{ASTExpression, ASTProgram, ASTStatement};
+use crate::tacky_tokens::{TInstruction, TProgram, TUnaryOperator, TValue};
 
-pub fn generate_assembly(program: ASTProgram) -> ASMProgram {
+pub fn generate_assembly(program: TProgram) -> ASMProgram {
     let function_definition = ASMFunctionDefinition {
         name: program.function_definition.name,
         instructions: asm_instructions(program.function_definition.body)
@@ -9,17 +10,43 @@ pub fn generate_assembly(program: ASTProgram) -> ASMProgram {
     ASMProgram { function_definition }
 }
 
-fn asm_instructions(body: ASTStatement) -> Vec<ASMInstruction> {
-    match body {
-        ASTStatement::Return(exp) => {
-            let value = match exp {
-                ASTExpression::Constant(value) => value,
-                _ => unreachable!("expected constant, found {exp:?}"),
-            };
-            let src = ASMOperand::Imm(value);
-            let dst = ASMOperand::Register;
-            vec![ASMInstruction::Mov { src, dst }, ASMInstruction::Ret]
-        },
-        // _ => Err("unexpected statement".to_string()).unwrap(),
+fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
+    let mut instructions = vec![];
+
+    for instruction in body {
+        match instruction {
+            TInstruction::Return(val) => {
+                instructions.append(vec![
+                    ASMInstruction::Mov { src: val.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+                    ASMInstruction::Ret,
+                ].as_mut());
+            },
+            TInstruction::Unary { op, src, dst } => {
+                instructions.append(vec![
+                    ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
+                    ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
+                ].as_mut());
+            }
+        }
+    }
+
+    instructions
+}
+
+impl TValue {
+    pub fn to_operand(&self) -> ASMOperand {
+        match self {
+            TValue::Constant(value) => ASMOperand::Imm(value.clone()),
+            TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
+        }
+    }
+}
+
+impl TUnaryOperator {
+    pub fn to_operator(&self) -> ASMUnaryOperator {
+        match self {
+            TUnaryOperator::Complement => ASMUnaryOperator::Not,
+            TUnaryOperator::Negate => ASMUnaryOperator::Neg,
+        }
     }
 }

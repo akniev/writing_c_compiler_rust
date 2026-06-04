@@ -7,11 +7,15 @@ mod assembly_tokens;
 mod code_emission;
 mod tacky_tokens;
 mod tacky;
+mod fix_pseudo;
+mod fix_mov;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use crate::fix_mov::fix_movs_in_program;
+use crate::fix_pseudo::fix_pseudo_in_program;
 
 #[derive(Parser, Debug)]
 #[command(about = "C compiler arguments parser")]
@@ -58,21 +62,27 @@ fn main() {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
         println!("{:?}", program);
-    } else if args.codegen {
-        let tokens = lexer::tokenize(input_str);
-        let program = parser::parse(tokens).unwrap();
-        let assembly = assembly::generate_assembly(program);
-        println!("{:?}", assembly);
     } else if args.tacky {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
-        let tacky_program = tacky::parse_tacky(program).unwrap();
-        println!("{:?}", tacky_program);
+        let tacky = tacky::parse_tacky(program).unwrap();
+        println!("{:?}", tacky);
+    } else if args.codegen {
+        let tokens = lexer::tokenize(input_str);
+        let program = parser::parse(tokens).unwrap();
+        let tacky = tacky::parse_tacky(program).unwrap();
+        let assembly = assembly::generate_assembly(tacky);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
+        let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
+        println!("{:?}", assembly_mov_fixed);
     } else {
         let tokens = lexer::tokenize(input_str);
         let program = parser::parse(tokens).unwrap();
-        let assembly = assembly::generate_assembly(program);
-        let code = code_emission::generate_code(assembly);
+        let tacky = tacky::parse_tacky(program).unwrap();
+        let assembly = assembly::generate_assembly(tacky);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
+        let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
+        let code = code_emission::generate_code(assembly_mov_fixed);
         println!("{}", code);
 
         let path = Path::new(&args.input);
