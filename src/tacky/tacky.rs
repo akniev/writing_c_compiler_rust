@@ -1,7 +1,8 @@
-use crate::parser::ast_tokens::{ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
-use crate::tacky::tacky_tokens::{TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::parser::ast_tokens::ASTExpression::Binary;
 
 static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -39,8 +40,14 @@ fn emit_tacky(exp: ASTExpression, instructions: &mut Vec<TInstruction>) -> TValu
             instructions.push(TInstruction::Unary { op: tacky_op, src, dst: dst.clone() });
             dst
         }
-        ASTExpression::Binary { op, lhs, rhs } => {
-            todo!()
+        ASTExpression::Binary { op, lhs: e1, rhs: e2 } => {
+            let v1 = emit_tacky(*e1, instructions);
+            let v2 = emit_tacky(*e2, instructions);
+            let dst_name = make_temporary();
+            let dst = TValue::Var(dst_name);
+            let tacky_op = convert_binop(op);
+            instructions.push(TInstruction::Binary { op: tacky_op, src1: v1, src2: v2, dst: dst.clone() });
+            dst
         }
     }
 }
@@ -54,5 +61,15 @@ fn convert_unop(op: ASTUnaryOperator) -> TUnaryOperator {
     match op {
         ASTUnaryOperator::Negate => TUnaryOperator::Negate,
         ASTUnaryOperator::Complement => TUnaryOperator::Complement,
+    }
+}
+
+fn convert_binop(op: ASTBinaryOperator) -> TBinaryOperator {
+    match op {
+        ASTBinaryOperator::Add => TBinaryOperator::Add,
+        ASTBinaryOperator::Subtract => TBinaryOperator::Subtract,
+        ASTBinaryOperator::Multiply => TBinaryOperator::Multiply,
+        ASTBinaryOperator::Divide => TBinaryOperator::Divide,
+        ASTBinaryOperator::Remainder => TBinaryOperator::Remainder,
     }
 }

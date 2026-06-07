@@ -26,6 +26,9 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                     ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
                 ].as_mut());
             }
+            TInstruction::Binary { op, src1, src2, dst } => {
+                todo!()
+            }
         }
     }
 
