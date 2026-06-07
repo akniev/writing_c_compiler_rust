@@ -2,7 +2,6 @@ use crate::parser::ast_tokens::{ASTBinaryOperator, ASTExpression, ASTProgram, AS
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::parser::ast_tokens::ASTExpression::Binary;
 
 static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
 

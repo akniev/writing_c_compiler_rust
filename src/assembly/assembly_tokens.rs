@@ -100,11 +100,10 @@ impl ASMUnaryOperator {
 
 impl ASMBinaryOperator {
     pub fn to_string(&self) -> String {
-        todo!()
-        // match self {
-        //     ASMBinaryOperator::Add => "addl".to_string(),
-        //     ASMBinaryOperator::Sub => "subl".to_string(),
-        //     ASMBinaryOperator::Mult => "imull".to_string(),
-        // }
+        match self {
+            ASMBinaryOperator::Add => "addl".to_string(),
+            ASMBinaryOperator::Sub => "subl".to_string(),
+            ASMBinaryOperator::Mult => "imull".to_string(),
+        }
     }
 }
