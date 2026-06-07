@@ -15,6 +15,10 @@ pub enum LexerToken {
     Tilde,
     Hyphen,
     Decrement,
+    Plus,
+    Asterisk,
+    ForwardSlash,
+    Percent,
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -35,6 +39,10 @@ pub enum LexerTokenKind {
     Tilde,
     Hyphen,
     Decrement,
+    Plus,
+    Asterisk,
+    ForwardSlash,
+    Percent,
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -56,6 +64,11 @@ impl LexerToken {
             LexerToken::Tilde => LexerTokenKind::Tilde,
             LexerToken::Hyphen => LexerTokenKind::Hyphen,
             LexerToken::Decrement => LexerTokenKind::Decrement,
+            LexerToken::Plus => LexerTokenKind::Plus,
+            LexerToken::Asterisk => LexerTokenKind::Asterisk,
+            LexerToken::ForwardSlash => LexerTokenKind::ForwardSlash,
+            LexerToken::Percent => LexerTokenKind::Percent,
+            // We need them to be able to remove them from code because we don't need them yet
             LexerToken::Comment => LexerTokenKind::Comment,
             LexerToken::CompilerDirective => LexerTokenKind::CompilerDirective,
         }
@@ -78,6 +91,11 @@ impl LexerTokenKind {
             Self::Tilde => r"^~",
             Self::Hyphen => r"^-",
             Self::Decrement => r"^--",
+            Self::Plus => r"^\+",
+            Self::Asterisk => r"^\*",
+            Self::ForwardSlash => r"^/",
+            Self::Percent => r"^%",
+            // We need them to be able to remove them from code because we don't need them yet
             Self::Comment => r"^(?://[^\r\n]*|/\*[\s\S]*?\*/)",
             Self::CompilerDirective => r"(?m)^#[^\r\n]*",
         }).expect("Invalid regex")
@@ -98,6 +116,11 @@ impl LexerTokenKind {
             LexerTokenKind::Tilde => LexerToken::Tilde,
             LexerTokenKind::Hyphen => LexerToken::Hyphen,
             LexerTokenKind::Decrement => LexerToken::Decrement,
+            LexerTokenKind::Plus => LexerToken::Plus,
+            LexerTokenKind::Asterisk => LexerToken::Asterisk,
+            LexerTokenKind::ForwardSlash => LexerToken::ForwardSlash,
+            LexerTokenKind::Percent => LexerToken::Percent,
+            // We need them to be able to remove them from code because we don't need them yet
             LexerTokenKind::Comment => LexerToken::Comment,
             LexerTokenKind::CompilerDirective => LexerToken::CompilerDirective,
         }
@@ -118,6 +141,11 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::Tilde,
     LexerTokenKind::Hyphen,
     LexerTokenKind::Decrement,
+    LexerTokenKind::Plus,
+    LexerTokenKind::Asterisk,
+    LexerTokenKind::ForwardSlash,
+    LexerTokenKind::Percent,
+    // We need them to be able to remove them from code because we don't need them yet
     LexerTokenKind::Comment,
     LexerTokenKind::CompilerDirective,
 ];
