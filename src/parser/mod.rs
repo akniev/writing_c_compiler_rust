@@ -1,2 +1,2 @@
 pub mod parser;
-pub mod parser_tokens;
+pub mod ast_tokens;

@@ -1,4 +1,4 @@
-use crate::parser::parser_tokens::{ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -38,6 +38,9 @@ fn emit_tacky(exp: ASTExpression, instructions: &mut Vec<TInstruction>) -> TValu
             let tacky_op = convert_unop(op);
             instructions.push(TInstruction::Unary { op: tacky_op, src, dst: dst.clone() });
             dst
+        }
+        ASTExpression::Binary { op, lhs, rhs } => {
+            todo!()
         }
     }
 }
