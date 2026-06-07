@@ -32,6 +32,15 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
         ASMInstruction::Unary { unop: _, operand: _ } => {
             vec![instruction]
         }
+        ASMInstruction::Binary { binop: _, operand1: _, operand2: _ } => {
+            vec![instruction]
+        }
+        ASMInstruction::Idiv(_) => {
+            vec![instruction]
+        }
+        ASMInstruction::Cdq => {
+            vec![instruction]
+        }
         ASMInstruction::AllocateStack(_) => {
             vec![instruction]
         }

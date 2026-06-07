@@ -30,6 +30,19 @@ fn fix_pseudo_in_instruction(instruction: ASMInstruction) -> ASMInstruction {
         ASMInstruction::Unary { unop, operand } => {
             ASMInstruction::Unary { unop, operand: fix_pseudo_in_operands(operand) }
         }
+        ASMInstruction::Binary { binop, operand1, operand2 } => {
+            ASMInstruction::Binary {
+                binop,
+                operand1: fix_pseudo_in_operands(operand1),
+                operand2: fix_pseudo_in_operands(operand2)
+            }
+        }
+        ASMInstruction::Idiv(operand) => {
+            ASMInstruction::Idiv(fix_pseudo_in_operands(operand))
+        }
+        ASMInstruction::Cdq => {
+            ASMInstruction::Cdq
+        }
         ASMInstruction::AllocateStack(size) => {
             ASMInstruction::AllocateStack(size)
         }

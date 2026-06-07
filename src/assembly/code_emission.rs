@@ -28,6 +28,15 @@ fn print_instruction(inst: ASMInstruction, result: &mut String) {
         ASMInstruction::Unary { unop, operand } => {
             result.push_str(&format!("  {} {}\n", unop.to_string(), operand.to_string()));
         }
+        ASMInstruction::Binary { binop, operand1, operand2 } => {
+            result.push_str(&format!("  {} {}, {}\n", binop.to_string(), operand1.to_string(), operand2.to_string()));
+        }
+        ASMInstruction::Idiv(operand) => {
+            result.push_str(&format!("  idiv {}\n", operand.to_string()));
+        }
+        ASMInstruction::Cdq => {
+            result.push_str("  cdq\n");
+        }
         ASMInstruction::AllocateStack(size) => {
             result.push_str(&format!("  subq ${}, %rsp\n", size));
         }

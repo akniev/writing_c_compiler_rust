@@ -1,5 +1,5 @@
-use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
-use crate::tacky::tacky_tokens::{TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TInstruction, TProgram, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
     let function_definition = ASMFunctionDefinition {
@@ -27,7 +27,30 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                 ].as_mut());
             }
             TInstruction::Binary { op, src1, src2, dst } => {
-                todo!()
+                match op {
+                    TBinaryOperator::Divide => {
+                        instructions.append(vec![
+                            ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+                            ASMInstruction::Cdq,
+                            ASMInstruction::Idiv(src2.to_operand()),
+                            ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: dst.to_operand()}
+                        ].as_mut());
+                    }
+                    TBinaryOperator::Remainder => {
+                        instructions.append(vec![
+                            ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+                            ASMInstruction::Cdq,
+                            ASMInstruction::Idiv(src2.to_operand()),
+                            ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::DX), dst: dst.to_operand()}
+                        ].as_mut());
+                    }
+                    _ => {
+                        instructions.append(vec![
+                            ASMInstruction::Mov { src: src1.to_operand(), dst: dst.to_operand() },
+                            ASMInstruction::Binary { binop: op.to_operator(), operand1: src2.to_operand(), operand2: dst.to_operand() }
+                        ].as_mut());
+                    }
+                }
             }
         }
     }
@@ -49,6 +72,17 @@ impl TUnaryOperator {
         match self {
             TUnaryOperator::Complement => ASMUnaryOperator::Not,
             TUnaryOperator::Negate => ASMUnaryOperator::Neg,
+        }
+    }
+}
+
+impl TBinaryOperator {
+    pub fn to_operator(&self) -> ASMBinaryOperator {
+        match self {
+            TBinaryOperator::Add => ASMBinaryOperator::Add,
+            TBinaryOperator::Subtract => ASMBinaryOperator::Sub,
+            TBinaryOperator::Multiply => ASMBinaryOperator::Mult,
+            _ => panic!("Unsupported binary operator"),
         }
     }
 }
