@@ -47,6 +47,11 @@ pub enum ASMBinaryOperator {
     Add,
     Sub,
     Mult,
+    And,
+    Or,
+    Xor,
+    ShiftLeft,
+    ShiftRight,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -61,6 +66,7 @@ pub enum ASMOperand {
 pub enum ASMRegister {
     AX,
     DX,
+    CX,
     R10,
     R11,
 }
@@ -83,6 +89,7 @@ impl ASMRegister {
         match self {
             ASMRegister::AX => String::from("%eax"),
             ASMRegister::DX => String::from("%edx"),
+            ASMRegister::CX => "%ecx".to_string(),
             ASMRegister::R10 => "%r10d".to_string(),
             ASMRegister::R11 => "%r11d".to_string(),
         }
@@ -104,6 +111,11 @@ impl ASMBinaryOperator {
             ASMBinaryOperator::Add => "addl".to_string(),
             ASMBinaryOperator::Sub => "subl".to_string(),
             ASMBinaryOperator::Mult => "imull".to_string(),
+            ASMBinaryOperator::And => "andl".to_string(),
+            ASMBinaryOperator::Or => "orl".to_string(),
+            ASMBinaryOperator::Xor => "xorl".to_string(),
+            ASMBinaryOperator::ShiftLeft => "sall".to_string(),
+            ASMBinaryOperator::ShiftRight => "sarl".to_string(),
         }
     }
 }

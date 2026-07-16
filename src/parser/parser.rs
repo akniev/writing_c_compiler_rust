@@ -104,8 +104,12 @@ impl Parser {
     fn precedence(token: &Option<LexerToken>) -> i32 {
         let token = token.as_ref().unwrap();
         match token {
-            LexerToken::Plus | LexerToken::Hyphen => 45,
-            LexerToken::Asterisk | LexerToken::ForwardSlash | LexerToken::Percent => 50,
+            LexerToken::Asterisk | LexerToken::ForwardSlash | LexerToken::Percent => 50, // *, /, %
+            LexerToken::Plus | LexerToken::Hyphen => 45, // +, -
+            LexerToken::LeftShift | LexerToken::RightShift => 40, // <<, >>
+            LexerToken::Ampersand => 35, // &
+            LexerToken::Caret => 30, // ^
+            LexerToken::Pipe => 25, // |
             _ => 0,
         }
     }
@@ -113,7 +117,16 @@ impl Parser {
     fn is_binary_op(token: &Option<LexerToken>) -> bool {
         let token = token.as_ref().unwrap();
         match token {
-            LexerToken::Plus | LexerToken::Hyphen | LexerToken::Asterisk | LexerToken::ForwardSlash | LexerToken::Percent => true,
+            LexerToken::Plus
+            | LexerToken::Hyphen
+            | LexerToken::Asterisk
+            | LexerToken::ForwardSlash
+            | LexerToken::Percent
+            | LexerToken::Ampersand
+            | LexerToken::Pipe
+            | LexerToken::Caret
+            | LexerToken::LeftShift
+            | LexerToken::RightShift => true,
             _ => false,
         }
     }
@@ -137,6 +150,11 @@ impl Parser {
             LexerToken::Asterisk => Ok(ASTBinaryOperator::Multiply),
             LexerToken::ForwardSlash => Ok(ASTBinaryOperator::Divide),
             LexerToken::Percent => Ok(ASTBinaryOperator::Remainder),
+            LexerToken::Ampersand => Ok(ASTBinaryOperator::BitwiseAnd),
+            LexerToken::Pipe => Ok(ASTBinaryOperator::BitwiseOr),
+            LexerToken::Caret => Ok(ASTBinaryOperator::BitwiseXor),
+            LexerToken::LeftShift => Ok(ASTBinaryOperator::ShiftLeft),
+            LexerToken::RightShift => Ok(ASTBinaryOperator::ShiftRight),
             _ => Err("unexpected token".to_string()),
         }
     }

@@ -45,5 +45,10 @@ pub enum TBinaryOperator {
     Subtract,
     Multiply,
     Divide,
-    Remainder
+    Remainder,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    ShiftLeft,
+    ShiftRight,
 }

@@ -70,5 +70,10 @@ fn convert_binop(op: ASTBinaryOperator) -> TBinaryOperator {
         ASTBinaryOperator::Multiply => TBinaryOperator::Multiply,
         ASTBinaryOperator::Divide => TBinaryOperator::Divide,
         ASTBinaryOperator::Remainder => TBinaryOperator::Remainder,
+        ASTBinaryOperator::BitwiseAnd => TBinaryOperator::BitwiseAnd,
+        ASTBinaryOperator::BitwiseOr => TBinaryOperator::BitwiseOr,
+        ASTBinaryOperator::BitwiseXor => TBinaryOperator::BitwiseXor,
+        ASTBinaryOperator::ShiftLeft => TBinaryOperator::ShiftLeft,
+        ASTBinaryOperator::ShiftRight => TBinaryOperator::ShiftRight,
     }
 }

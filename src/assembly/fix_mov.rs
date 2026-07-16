@@ -32,7 +32,17 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
         ASMInstruction::Unary { unop: _, operand: _ } => {
             vec![instruction]
         }
-        ASMInstruction::Binary { binop: binop @ (ASMBinaryOperator::Add | ASMBinaryOperator::Sub), operand1, operand2 } => {
+        ASMInstruction::Binary {
+            binop: binop @ (
+                ASMBinaryOperator::Add
+                | ASMBinaryOperator::Sub
+                | ASMBinaryOperator::And
+                | ASMBinaryOperator::Or
+                | ASMBinaryOperator::Xor
+            ),
+            operand1,
+            operand2
+        } => {
             match (operand1.clone(), operand2.clone()) {
                 (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
                     vec![
@@ -45,7 +55,11 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 }
             }
         }
-        ASMInstruction::Binary { binop: binop @ ASMBinaryOperator::Mult, operand1, operand2 } => {
+        ASMInstruction::Binary {
+            binop: binop @ ASMBinaryOperator::Mult,
+            operand1,
+            operand2
+        } => {
             match operand2 {
                 ASMOperand::Stack(_) => {
                     vec![
@@ -56,6 +70,23 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 }
                 _ => {
                     vec![instruction]
+                }
+            }
+        }
+        ASMInstruction::Binary {
+            binop: binop@ (ASMBinaryOperator::ShiftLeft | ASMBinaryOperator::ShiftRight),
+            operand1,
+            operand2
+        } => {
+            match operand1 {
+                ASMOperand::Imm(_) => {
+                    vec![instruction]
+                }
+                _ => {
+                    vec![
+                        ASMInstruction::Mov { src: operand1.clone(), dst: ASMOperand::Reg(ASMRegister::CX) },
+                        ASMInstruction::Binary { binop, operand1: ASMOperand::Reg(ASMRegister::CX), operand2 },
+                    ]
                 }
             }
         }

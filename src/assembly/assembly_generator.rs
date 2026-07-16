@@ -82,6 +82,11 @@ impl TBinaryOperator {
             TBinaryOperator::Add => ASMBinaryOperator::Add,
             TBinaryOperator::Subtract => ASMBinaryOperator::Sub,
             TBinaryOperator::Multiply => ASMBinaryOperator::Mult,
+            TBinaryOperator::BitwiseAnd => ASMBinaryOperator::And,
+            TBinaryOperator::BitwiseOr => ASMBinaryOperator::Or,
+            TBinaryOperator::BitwiseXor => ASMBinaryOperator::Xor,
+            TBinaryOperator::ShiftLeft => ASMBinaryOperator::ShiftLeft,
+            TBinaryOperator::ShiftRight => ASMBinaryOperator::ShiftRight,
             _ => panic!("Unsupported binary operator"),
         }
     }
