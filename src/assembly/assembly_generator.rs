@@ -52,6 +52,9 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                     }
                 }
             }
+            _ => {
+                panic!("Unsupported instruction");
+            }
         }
     }
 
@@ -72,6 +75,7 @@ impl TUnaryOperator {
         match self {
             TUnaryOperator::Complement => ASMUnaryOperator::Not,
             TUnaryOperator::Negate => ASMUnaryOperator::Neg,
+            _ => panic!("Unsupported unary operator"),
         }
     }
 }
