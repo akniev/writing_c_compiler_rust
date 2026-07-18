@@ -8,7 +8,7 @@ use crate::parser::ast_tokens::{ASTBinaryOperator, ASTExpression, ASTFunctionDef
 <exp> ::= <factor> | <exp> <binop> <exp>
 <factor> ::= <int> | <unop> <factor> | "(" <exp> ")"
 <unop> ::= "-" | "~"
-<binop> ::= "-" | "+" | "*" | "%"
+<binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">="
 <identifier> ::= ? An identifier token ?
 <int> ::= ? A constant token ?
  */
@@ -84,7 +84,7 @@ impl Parser {
                 };
                 Ok(ASTExpression::Constant(value))
             }
-            LexerToken::Tilde | LexerToken::Hyphen => {
+            LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark => {
                 let operator = self.parse_unop()?;
                 let inner_exp = self.parse_factor()?;
                 Ok(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) })
@@ -107,9 +107,16 @@ impl Parser {
             LexerToken::Asterisk | LexerToken::ForwardSlash | LexerToken::Percent => 50, // *, /, %
             LexerToken::Plus | LexerToken::Hyphen => 45, // +, -
             LexerToken::LeftShift | LexerToken::RightShift => 40, // <<, >>
-            LexerToken::Ampersand => 35, // &
-            LexerToken::Caret => 30, // ^
-            LexerToken::Pipe => 25, // |
+            LexerToken::LessThan
+            | LexerToken::LessThanOrEqual
+            | LexerToken::GreaterThan
+            | LexerToken::GreaterThanOrEqual => 35, // <, >, <=, >=
+            LexerToken::TwoEqualSigns | LexerToken::ExclamationMarkEqualSign => 30, // ==, !=
+            LexerToken::Ampersand => 25, // &
+            LexerToken::Caret => 20, // ^
+            LexerToken::Pipe => 15, // |
+            LexerToken::TwoAmpersands => 10, // &&
+            LexerToken::TwoPipes => 5, // ||
             _ => 0,
         }
     }
@@ -126,7 +133,15 @@ impl Parser {
             | LexerToken::Pipe
             | LexerToken::Caret
             | LexerToken::LeftShift
-            | LexerToken::RightShift => true,
+            | LexerToken::RightShift
+            | LexerToken::TwoAmpersands
+            | LexerToken::TwoPipes
+            | LexerToken::TwoEqualSigns
+            | LexerToken::ExclamationMarkEqualSign
+            | LexerToken::LessThan
+            | LexerToken::GreaterThan
+            | LexerToken::LessThanOrEqual
+            | LexerToken::GreaterThanOrEqual => true,
             _ => false,
         }
     }
@@ -137,6 +152,7 @@ impl Parser {
         match next_token {
             LexerToken::Tilde => Ok(ASTUnaryOperator::Complement),
             LexerToken::Hyphen => Ok(ASTUnaryOperator::Negate),
+            LexerToken::ExclamationMark => Ok(ASTUnaryOperator::Not),
             _ => Err("unexpected token".to_string()),
         }
     }
@@ -155,6 +171,14 @@ impl Parser {
             LexerToken::Caret => Ok(ASTBinaryOperator::BitwiseXor),
             LexerToken::LeftShift => Ok(ASTBinaryOperator::ShiftLeft),
             LexerToken::RightShift => Ok(ASTBinaryOperator::ShiftRight),
+            LexerToken::TwoAmpersands => Ok(ASTBinaryOperator::And),
+            LexerToken::TwoPipes => Ok(ASTBinaryOperator::Or),
+            LexerToken::TwoEqualSigns => Ok(ASTBinaryOperator::Equal),
+            LexerToken::ExclamationMarkEqualSign => Ok(ASTBinaryOperator::NotEqual),
+            LexerToken::LessThan => Ok(ASTBinaryOperator::LessThan),
+            LexerToken::GreaterThan => Ok(ASTBinaryOperator::GreaterThan),
+            LexerToken::LessThanOrEqual => Ok(ASTBinaryOperator::LessThanOrEqual),
+            LexerToken::GreaterThanOrEqual => Ok(ASTBinaryOperator::GreaterThanOrEqual),
             _ => Err("unexpected token".to_string()),
         }
     }

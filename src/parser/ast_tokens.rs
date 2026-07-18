@@ -6,8 +6,8 @@ statement = Return(exp)
 exp = Constant(int)
     | Unary(unary_operator, exp)
     | Binary(binary_operator, exp, exp)
-unary_operator = Complement | Negate
-binary_operator = Add | Subtract | Multiply | Divide | Remainder
+unary_operator = Complement | Negate | Not
+binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | And | Or | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
  */
 
 #[derive(Debug, PartialEq)]
@@ -37,6 +37,7 @@ pub enum ASTExpression {
 pub enum ASTUnaryOperator {
     Complement,
     Negate,
+    Not,
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,4 +52,12 @@ pub enum ASTBinaryOperator {
     BitwiseXor,
     ShiftLeft,
     ShiftRight,
+    And,
+    Or,
+    Equal,
+    NotEqual,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
 }

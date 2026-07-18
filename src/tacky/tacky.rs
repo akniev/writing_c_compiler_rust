@@ -60,6 +60,7 @@ fn convert_unop(op: ASTUnaryOperator) -> TUnaryOperator {
     match op {
         ASTUnaryOperator::Negate => TUnaryOperator::Negate,
         ASTUnaryOperator::Complement => TUnaryOperator::Complement,
+        _ => unreachable!(),
     }
 }
 
@@ -75,5 +76,6 @@ fn convert_binop(op: ASTBinaryOperator) -> TBinaryOperator {
         ASTBinaryOperator::BitwiseXor => TBinaryOperator::BitwiseXor,
         ASTBinaryOperator::ShiftLeft => TBinaryOperator::ShiftLeft,
         ASTBinaryOperator::ShiftRight => TBinaryOperator::ShiftRight,
+        _ => unreachable!(),
     }
 }
