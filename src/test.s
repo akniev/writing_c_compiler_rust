@@ -3,11 +3,13 @@ main:
   pushq %rbp
   movq %rsp, %rbp
   subq $8, %rsp
-  movl $5, -4(%rbp)
-  negl -4(%rbp)
-  movl -4(%rbp), %r10d
-  movl %r10d, -8(%rbp)
-  sarl $30, -8(%rbp)
+  movl $3, %r11d
+  cmpl $1, %r11d
+  movl $0, -4(%rbp)
+  sete -4(%rbp)
+  cmpl $2, -4(%rbp)
+  movl $0, -8(%rbp)
+  setne -8(%rbp)
   movl -8(%rbp), %eax
   movq %rbp, %rsp
   popq %rbp

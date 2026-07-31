@@ -92,11 +92,21 @@ pub enum ASMRegister {
     R11,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASMRegSize {
+    TwoBytes,
+    FourBytes,
+}
+
 impl ASMOperand {
-    pub fn to_string(&self) -> String {
+    pub fn to_string_4b(&self) -> String {
+        self.to_string(ASMRegSize::FourBytes)
+    }
+
+    pub fn to_string(&self, size: ASMRegSize) -> String {
         match self {
             ASMOperand::Imm(value) => format!("${}", value),
-            ASMOperand::Reg(reg) => reg.to_string(),
+            ASMOperand::Reg(reg) => reg.to_string(size),
             ASMOperand::Stack(offset) => format!("-{}(%rbp)", offset),
             ASMOperand::Pseudo(_) => {
                 panic!("Pseudo-operands shouldn't be used here");
@@ -106,10 +116,26 @@ impl ASMOperand {
 }
 
 impl ASMRegister {
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, size: ASMRegSize) -> String {
+        match size {
+            ASMRegSize::TwoBytes => self.to_string2b(),
+            ASMRegSize::FourBytes => self.to_string4b(),
+        }
+    }
+    fn to_string2b(&self) -> String {
         match self {
-            ASMRegister::AX => String::from("%eax"),
-            ASMRegister::DX => String::from("%edx"),
+            ASMRegister::AX => "%al".to_string(),
+            ASMRegister::DX => "%dl".to_string(),
+            ASMRegister::CX => "%cl".to_string(),
+            ASMRegister::R10 => "%r10b".to_string(),
+            ASMRegister::R11 => "%r11b".to_string(),
+        }
+    }
+
+    fn to_string4b(&self) -> String {
+        match self {
+            ASMRegister::AX => "%eax".to_string(),
+            ASMRegister::DX => "%edx".to_string(),
             ASMRegister::CX => "%ecx".to_string(),
             ASMRegister::R10 => "%r10d".to_string(),
             ASMRegister::R11 => "%r11d".to_string(),

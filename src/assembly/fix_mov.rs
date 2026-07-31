@@ -40,7 +40,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 (operand1, operand2 @ ASMOperand::Imm(_)) => {
                     vec![
                         ASMInstruction::Mov { src: operand2, dst: ASMOperand::Reg(ASMRegister::R11) },
-                        ASMInstruction::Cmp { operand1: ASMOperand::Reg(ASMRegister::R11), operand2: operand1 }
+                        ASMInstruction::Cmp { operand1, operand2: ASMOperand::Reg(ASMRegister::R11) }
                     ]
                 }
                 _ => {

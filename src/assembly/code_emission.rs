@@ -1,4 +1,4 @@
-use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMProgram};
+use crate::assembly::assembly_tokens::{ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMProgram, ASMRegSize};
 
 pub fn generate_code(asm: ASMProgram) -> String {
     let mut result = String::new();
@@ -23,16 +23,16 @@ fn print_function(function: ASMFunctionDefinition, result: &mut String) {
 fn print_instruction(inst: ASMInstruction, result: &mut String) {
     match inst {
         ASMInstruction::Mov { src, dst } => {
-            result.push_str(&format!("  movl {}, {}\n", src.to_string(), dst.to_string()));
+            result.push_str(&format!("  movl {}, {}\n", src.to_string_4b(), dst.to_string_4b()));
         }
         ASMInstruction::Unary { unop, operand } => {
-            result.push_str(&format!("  {} {}\n", unop.to_string(), operand.to_string()));
+            result.push_str(&format!("  {} {}\n", unop.to_string(), operand.to_string_4b()));
         }
         ASMInstruction::Binary { binop, operand1, operand2 } => {
-            result.push_str(&format!("  {} {}, {}\n", binop.to_string(), operand1.to_string(), operand2.to_string()));
+            result.push_str(&format!("  {} {}, {}\n", binop.to_string(), operand1.to_string_4b(), operand2.to_string_4b()));
         }
         ASMInstruction::Idiv(operand) => {
-            result.push_str(&format!("  idiv {}\n", operand.to_string()));
+            result.push_str(&format!("  idiv {}\n", operand.to_string_4b()));
         }
         ASMInstruction::Cdq => {
             result.push_str("  cdq\n");
@@ -45,8 +45,33 @@ fn print_instruction(inst: ASMInstruction, result: &mut String) {
             result.push_str("  popq %rbp\n");
             result.push_str("  ret\n");
         }
-        _ => {
-            panic!("Unsupported instruction");
+        ASMInstruction::Cmp { operand1, operand2 } => {
+            result.push_str(&format!("  cmpl {}, {}\n", operand1.to_string_4b(), operand2.to_string_4b()));
+        }
+        ASMInstruction::Jmp { label } => {
+            result.push_str(&format!("  jmp .L{}\n", label));
+        }
+        ASMInstruction::JmpCC { cond_code, label } => {
+            result.push_str(&format!("  j{} .L{}\n", cond_code.to_string(), label));
+        }
+        ASMInstruction::SetCC { cond_code, operand } => {
+            result.push_str(&format!("  set{} {}\n", cond_code.to_string(), operand.to_string(ASMRegSize::TwoBytes)));
+        }
+        ASMInstruction::Label(label) => {
+            result.push_str(&format!(".L{}:\n", label));
+        }
+    }
+}
+
+impl ASMCondCode {
+    pub fn to_string(&self) -> String {
+        match self {
+            ASMCondCode::E => "e".to_string(),
+            ASMCondCode::NE => "ne".to_string(),
+            ASMCondCode::G => "g".to_string(),
+            ASMCondCode::GE => "ge".to_string(),
+            ASMCondCode::L => "l".to_string(),
+            ASMCondCode::LE => "le".to_string(),
         }
     }
 }
