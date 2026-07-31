@@ -45,5 +45,8 @@ fn print_instruction(inst: ASMInstruction, result: &mut String) {
             result.push_str("  popq %rbp\n");
             result.push_str("  ret\n");
         }
+        _ => {
+            panic!("Unsupported instruction");
+        }
     }
 }

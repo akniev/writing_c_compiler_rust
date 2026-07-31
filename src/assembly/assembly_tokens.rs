@@ -4,14 +4,20 @@
  instruction = Mov(operand src, operand dst)
              | Unary(unary_operator, operand)
              | Binary(binary_operator, operand, operand)
+             | Cmp(operand, operand)
              | Idiv(operand)
              | Cdq
+             | Jmp(identifier)
+             | JmpCC(cond_code, identifier)
+             | SetCC(cond_code, operand)
+             | Label(identifier)
              | AllocateStack(int)
              | Ret
  unary_operator = Neg | Not
  binary_operator = Add | Sub | Mult
  operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int)
- reg = AX | DX | R10 | R11
+ cond_code = E | NE | G | GE | L | LE
+ reg = AX | DX | CX | R10 | R11
  */
 
 #[derive(Debug, PartialEq)]
@@ -30,10 +36,25 @@ pub enum ASMInstruction {
     Mov { src: ASMOperand, dst: ASMOperand },
     Unary { unop: ASMUnaryOperator, operand: ASMOperand },
     Binary { binop: ASMBinaryOperator, operand1: ASMOperand, operand2: ASMOperand },
+    Cmp { operand1: ASMOperand, operand2: ASMOperand },
     Idiv(ASMOperand),
+    Jmp { label: String },
+    JmpCC { cond_code: ASMCondCode, label: String },
+    SetCC { cond_code: ASMCondCode, operand: ASMOperand },
+    Label(String),
     Cdq,
     AllocateStack(i32),
     Ret,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASMCondCode {
+    E,
+    NE,
+    G,
+    GE,
+    L,
+    LE,
 }
 
 #[derive(Debug, Clone, PartialEq)]

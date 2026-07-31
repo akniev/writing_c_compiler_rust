@@ -29,8 +29,24 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 }
             }
         }
-        ASMInstruction::Unary { unop: _, operand: _ } => {
-            vec![instruction]
+        ASMInstruction::Cmp { operand1, operand2 } => {
+            match (operand1.clone(), operand2.clone()) {
+                (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
+                    vec![
+                        ASMInstruction::Mov { src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
+                        ASMInstruction::Cmp { operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
+                    ]
+                }
+                (operand1, operand2 @ ASMOperand::Imm(_)) => {
+                    vec![
+                        ASMInstruction::Mov { src: operand2, dst: ASMOperand::Reg(ASMRegister::R11) },
+                        ASMInstruction::Cmp { operand1: ASMOperand::Reg(ASMRegister::R11), operand2: operand1 }
+                    ]
+                }
+                _ => {
+                    vec![instruction]
+                }
+            }
         }
         ASMInstruction::Binary {
             binop: binop @ (
@@ -103,13 +119,14 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                 }
             }
         }
-        ASMInstruction::Cdq => {
-            vec![instruction]
-        }
-        ASMInstruction::AllocateStack(_) => {
-            vec![instruction]
-        }
-        ASMInstruction::Ret => {
+        ASMInstruction::Cdq |
+        ASMInstruction::AllocateStack(_) |
+        ASMInstruction::Ret |
+        ASMInstruction::Jmp { label: _ } |
+        ASMInstruction::JmpCC { cond_code: _, label: _ } |
+        ASMInstruction::SetCC { cond_code: _, operand: _ } |
+        ASMInstruction::Label(_) |
+        ASMInstruction::Unary { unop: _, operand: _ } => {
             vec![instruction]
         }
     }

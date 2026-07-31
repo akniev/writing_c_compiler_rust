@@ -37,6 +37,24 @@ fn fix_pseudo_in_instruction(instruction: ASMInstruction) -> ASMInstruction {
                 operand2: fix_pseudo_in_operands(operand2)
             }
         }
+        ASMInstruction::Cmp { operand1, operand2 } => {
+            ASMInstruction::Cmp {
+                operand1: fix_pseudo_in_operands(operand1),
+                operand2: fix_pseudo_in_operands(operand2)
+            }
+        }
+        ASMInstruction::Jmp { label } => {
+            ASMInstruction::Jmp { label }
+        }
+        ASMInstruction::JmpCC { cond_code, label } => {
+            ASMInstruction::JmpCC { cond_code, label }
+        }
+        ASMInstruction::SetCC { cond_code, operand } => {
+            ASMInstruction::SetCC { cond_code, operand: fix_pseudo_in_operands(operand) }
+        }
+        ASMInstruction::Label(label) => {
+            ASMInstruction::Label(label)
+        }
         ASMInstruction::Idiv(operand) => {
             ASMInstruction::Idiv(fix_pseudo_in_operands(operand))
         }

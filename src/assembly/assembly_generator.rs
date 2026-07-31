@@ -1,4 +1,4 @@
-use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TInstruction, TProgram, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
@@ -21,10 +21,21 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                 ].as_mut());
             },
             TInstruction::Unary { op, src, dst } => {
-                instructions.append(vec![
-                    ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
-                    ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
-                ].as_mut());
+                match op {
+                    TUnaryOperator::Not => {
+                        instructions.append(vec![
+                            ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: src.to_operand() },
+                            ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
+                            ASMInstruction::SetCC { cond_code: ASMCondCode::E, operand: dst.to_operand() },
+                        ].as_mut());
+                    }
+                    _ => {
+                        instructions.append(vec![
+                            ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
+                            ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
+                        ].as_mut());
+                    }
+                }
             }
             TInstruction::Binary { op, src1, src2, dst } => {
                 match op {
@@ -44,6 +55,18 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                             ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::DX), dst: dst.to_operand()}
                         ].as_mut());
                     }
+                    TBinaryOperator::GreaterThan |
+                    TBinaryOperator::GreaterThanOrEqual |
+                    TBinaryOperator::LessThan |
+                    TBinaryOperator::LessThanOrEqual |
+                    TBinaryOperator::Equal |
+                    TBinaryOperator::NotEqual => {
+                        instructions.append(vec![
+                            ASMInstruction::Cmp { operand1: src2.to_operand(), operand2: src1.to_operand() },
+                            ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
+                            ASMInstruction::SetCC { cond_code: op.to_cond_code(), operand: dst.to_operand() },
+                        ].as_mut())
+                    }
                     _ => {
                         instructions.append(vec![
                             ASMInstruction::Mov { src: src1.to_operand(), dst: dst.to_operand() },
@@ -52,9 +75,36 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                     }
                 }
             }
-            _ => {
-                panic!("Unsupported instruction");
+            TInstruction::JumpIfZero { val, label } => {
+                instructions.append(vec![
+                    ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
+                    ASMInstruction::JmpCC { cond_code: ASMCondCode::E, label },
+                ].as_mut());
             }
+            TInstruction::JumpIfNonZero { val, label } => {
+                instructions.append(vec![
+                    ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
+                    ASMInstruction::JmpCC { cond_code: ASMCondCode::NE, label },
+                ].as_mut())
+            }
+            TInstruction::Jump { label } => {
+                instructions.append(vec![
+                    ASMInstruction::Jmp { label },
+                ].as_mut());
+            }
+            TInstruction::Label { label } => {
+                instructions.append(vec![
+                    ASMInstruction::Label(label),
+                ].as_mut());
+            }
+            TInstruction::Copy { src, dst } => {
+                instructions.append(vec![
+                    ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
+                ].as_mut());
+            }
+            // _ => {
+            //     panic!("Unsupported instruction");
+            // }
         }
     }
 
@@ -91,6 +141,18 @@ impl TBinaryOperator {
             TBinaryOperator::BitwiseXor => ASMBinaryOperator::Xor,
             TBinaryOperator::ShiftLeft => ASMBinaryOperator::ShiftLeft,
             TBinaryOperator::ShiftRight => ASMBinaryOperator::ShiftRight,
+            _ => panic!("Unsupported binary operator"),
+        }
+    }
+
+    pub fn to_cond_code(&self) -> ASMCondCode {
+        match self {
+            TBinaryOperator::GreaterThan => ASMCondCode::G,
+            TBinaryOperator::GreaterThanOrEqual => ASMCondCode::GE,
+            TBinaryOperator::LessThan => ASMCondCode::L,
+            TBinaryOperator::LessThanOrEqual => ASMCondCode::LE,
+            TBinaryOperator::Equal => ASMCondCode::E,
+            TBinaryOperator::NotEqual => ASMCondCode::NE,
             _ => panic!("Unsupported binary operator"),
         }
     }
