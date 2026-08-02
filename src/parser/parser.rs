@@ -1,12 +1,14 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
 
 /*
 <program> ::= <function>
 <function> ::= "int" <identifier> "(" "void" ")" "{" <statement> "}"
-<statement> ::= "return" <exp> ";"
+<block-item> ::= <statement> | <declaration>
+<declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
+<statement> ::= "return" <exp> ";" | <exp> ";" | ";"
 <exp> ::= <factor> | <exp> <binop> <exp>
-<factor> ::= <int> | <unop> <factor> | "(" <exp> ")"
+<factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")"
 <unop> ::= "-" | "~"
 <binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">="
 <identifier> ::= ? An identifier token ?
@@ -49,25 +51,101 @@ impl Parser {
         self.expect(LexerTokenKind::Void)?;
         self.expect(LexerTokenKind::CloseParen)?;
         self.expect(LexerTokenKind::OpenBrace)?;
-        let statement = self.parse_statement()?;
+
+        let mut function_body: Vec<ASTBlockItem> = vec![];
+
+        while self.peek() != Some(LexerToken::CloseBrace) {
+            let block_item = self.parse_block_item()?;
+            function_body.push(block_item);
+        }
+
+        //let statement = self.parse_statement()?;
         self.expect(LexerTokenKind::CloseBrace)?;
-        Ok(ASTFunctionDefinition { name, body: statement })
+        Ok(ASTFunctionDefinition { name, body: function_body })
+    }
+
+    fn parse_block_item(&mut self) -> Result<ASTBlockItem, String> {
+        let next_token = self.peek().ok_or("unexpected end of input")?;
+        match next_token {
+            LexerToken::Int => { // Block item is a declaration
+                let declaration = self.parse_declaration();
+                Ok(ASTBlockItem::Declaration(declaration?))
+            }
+            _ => { // Block item is a statement
+                let statement = self.parse_statement();
+                Ok(ASTBlockItem::Statement(statement?))
+            }
+        }
+    }
+
+    fn parse_declaration(&mut self) -> Result<ASTDeclaration, String> {
+        let Ok(LexerToken::Int) =
+            self.expect(LexerTokenKind::Int)
+        else {
+            return Err("expected identifier".to_string());
+        };
+
+        let Ok(LexerToken::Identifier(var_name)) =
+            self.expect(LexerTokenKind::Identifier)
+        else {
+            return Err("expected identifier".to_string());
+        };
+
+        let next_token = self.peek().ok_or("unexpected end of input")?;
+
+        if matches!(&next_token, LexerToken::Semicolon) {
+            self.expect(LexerTokenKind::Semicolon)?;
+            let declaration = ASTDeclaration::VariableDeclaration { name: var_name, init: None };
+            return Ok(declaration);
+        }
+
+        self.expect(LexerTokenKind::EqualSign)?;
+
+        let exp = self.parse_expression(0)?;
+        self.expect(LexerTokenKind::Semicolon)?;
+        let declaration = ASTDeclaration::VariableDeclaration { name: var_name, init: Some(exp) };
+
+        Ok(declaration)
     }
 
     fn parse_statement(&mut self) -> Result<ASTStatement, String> {
-        self.expect(LexerTokenKind::Return)?;
-        let exp = self.parse_expression(0)?;
-        self.expect(LexerTokenKind::Semicolon)?;
-        Ok(ASTStatement::Return(exp))
+        let next_token = self.peek().ok_or("unexpected end of input")?;
+        match next_token {
+            LexerToken::Return => {
+                self.expect(LexerTokenKind::Return)?;
+                let exp = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::Return(exp))
+            }
+            LexerToken::Semicolon => {
+                self.take();
+                Ok(ASTStatement::Null)
+            }
+            _ => {
+                let exp = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::Expression(exp))
+            }
+        }
+
     }
 
     fn parse_expression(&mut self, min_prec: i32) -> Result<ASTExpression, String> {
         let mut lhs = self.parse_factor()?;
         let mut next_token = self.peek();
         while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
-            let operator = self.parse_binop()?;
-            let rhs = self.parse_expression(Self::precedence(&next_token) + 1)?;
-            lhs = ASTExpression::Binary { op: operator, lhs: Box::new(lhs), rhs: Box::new(rhs) };
+            match next_token {
+                Some(LexerToken::EqualSign) => { // Assignment
+                    self.take();
+                    let rhs = self.parse_expression(Self::precedence(&next_token))?;
+                    lhs = ASTExpression::Assignment { lhs: Box::new(lhs), rhs: Box::new(rhs) };
+                }
+                _ => {
+                    let operator = self.parse_binop()?;
+                    let rhs = self.parse_expression(Self::precedence(&next_token) + 1)?;
+                    lhs = ASTExpression::Binary { op: operator, lhs: Box::new(lhs), rhs: Box::new(rhs) };
+                }
+            }
             next_token = self.peek();
         }
         Ok(lhs)
@@ -83,6 +161,10 @@ impl Parser {
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
                 Ok(ASTExpression::Constant(value))
+            }
+            LexerToken::Identifier(name) => {
+                self.take();
+                Ok(ASTExpression::Var(name.to_string()))
             }
             LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark => {
                 let operator = self.parse_unop()?;
@@ -117,14 +199,18 @@ impl Parser {
             LexerToken::Pipe => 15, // |
             LexerToken::TwoAmpersands => 10, // &&
             LexerToken::TwoPipes => 5, // ||
-            _ => 0,
+            LexerToken::EqualSign => 1,
+            _ => {
+                panic!("unexpected token");
+            },
         }
     }
 
     fn is_binary_op(token: &Option<LexerToken>) -> bool {
         let token = token.as_ref().unwrap();
         match token {
-            LexerToken::Plus
+            LexerToken::EqualSign
+            | LexerToken::Plus
             | LexerToken::Hyphen
             | LexerToken::Asterisk
             | LexerToken::ForwardSlash

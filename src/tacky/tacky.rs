@@ -6,11 +6,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub fn parse_tacky(program: ASTProgram) -> Result<TProgram, String> {
-    let ast_function = program.function_definition;
-    let function_body = parse_function_body(ast_function.body);
-    let t_function = TFunctionDefinition { name: ast_function.name, body: function_body };
-    let t_program = TProgram { function_definition: t_function };
-    Ok(t_program)
+    panic!("Not implemented");
+    // let ast_function = program.function_definition;
+    // let function_body = parse_function_body(ast_function.body);
+    // let t_function = TFunctionDefinition { name: ast_function.name, body: function_body };
+    // let t_program = TProgram { function_definition: t_function };
+    // Ok(t_program)
 }
 
 fn parse_function_body(body: ASTStatement) -> Vec<TInstruction> {
@@ -20,6 +21,9 @@ fn parse_function_body(body: ASTStatement) -> Vec<TInstruction> {
         ASTStatement::Return(expr) => {
             let val = emit_tacky(expr, &mut instructions);
             instructions.push(TInstruction::Return(val));
+        }
+        _ => {
+            panic!("Unsupported statement");
         }
     }
 
@@ -77,6 +81,9 @@ fn emit_tacky(exp: ASTExpression, instructions: &mut Vec<TInstruction>) -> TValu
             let tacky_op = convert_binop(op);
             instructions.push(TInstruction::Binary { op: tacky_op, src1: v1, src2: v2, dst: dst.clone() });
             dst
+        }
+        _ => {
+            panic!("Unsupported expression");
         }
     }
 }
