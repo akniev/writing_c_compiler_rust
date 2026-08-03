@@ -79,10 +79,11 @@ fn resolve_expression(
 ) -> ASTExpression {
     match exp {
         ASTExpression::Var(name) => {
-            if !variable_map.contains_key(&name) {
+            if let Some(unique_name) = variable_map.get(&name) {
+                return ASTExpression::Var(unique_name.clone());
+            } else {
                 panic!("Variable {} is not defined", name);
             }
-            ASTExpression::Var(name)
         }
         ASTExpression::Constant(int) => {
             ASTExpression::Constant(int)

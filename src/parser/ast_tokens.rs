@@ -14,36 +14,36 @@ unary_operator = Complement | Negate | Not
 binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | And | Or | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
  */
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ASTProgram {
     pub function_definition: ASTFunctionDefinition,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ASTFunctionDefinition {
     pub name: String,
     pub body: Vec<ASTBlockItem>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTBlockItem {
     Statement(ASTStatement),
     Declaration(ASTDeclaration),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTStatement {
     Return(ASTExpression),
     Expression(ASTExpression),
     Null,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTDeclaration {
     VariableDeclaration { name: String, init: Option<ASTExpression> }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTExpression {
     Var(String),
     Constant(i32),
@@ -52,14 +52,14 @@ pub enum ASTExpression {
     Assignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTUnaryOperator {
     Complement,
     Negate,
     Not,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTBinaryOperator {
     Add,
     Subtract,

@@ -9,7 +9,6 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use crate::assembly::assembly_generator::generate_assembly;
-use crate::assembly::assembly_tokens::ASMProgram;
 use crate::assembly::code_emission::generate_code;
 use crate::assembly::fix_mov::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
@@ -85,11 +84,18 @@ fn main() {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
+        println!("AST:");
+        println!("{:?}", program_resolved);
+
         let tacky = parse_tacky(program_resolved).unwrap();
+        println!("Tacky:");
+        println!("{:?}", tacky);
+
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
         let code = generate_code(assembly_mov_fixed);
+        println!("Assembly:");
         println!("{}", code);
 
         let path = Path::new(&args.input);
@@ -118,6 +124,14 @@ fn main() {
         } else {
             println!("Compilation failed");
             println!("{}", String::from_utf8_lossy(&output.stderr));
+        }
+
+        // Run the compiled program and print the exit code
+        if args.compile {
+            let output = Command::new(&out_file)
+                .output()
+                .expect("Failed to execute compiled program");
+            println!("Exit code: {}", output.status.code().unwrap_or(0));
         }
     }
 }
