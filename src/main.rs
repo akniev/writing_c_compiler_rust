@@ -2,17 +2,20 @@ mod lexer;
 mod parser;
 mod tacky;
 mod assembly;
+pub mod common;
 
 use clap::{ArgGroup, Parser};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 use crate::assembly::assembly_generator::generate_assembly;
+use crate::assembly::assembly_tokens::ASMProgram;
 use crate::assembly::code_emission::generate_code;
 use crate::assembly::fix_mov::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
 use crate::lexer::lexer::tokenize;
 use crate::parser::parser::parse;
+use crate::parser::variable_resolution::resolve_variables;
 use crate::tacky::tacky::parse_tacky;
 
 #[derive(Parser, Debug)]
@@ -60,6 +63,11 @@ fn main() {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         println!("{:?}", program);
+    } else if args.validate {
+        let tokens = tokenize(input_str);
+        let program = parse(tokens).unwrap();
+        let program_resolved = resolve_variables(program);
+        println!("{:?}", program_resolved);
     } else if args.tacky {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
@@ -76,7 +84,8 @@ fn main() {
     } else {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
-        let tacky = parse_tacky(program).unwrap();
+        let program_resolved = resolve_variables(program);
+        let tacky = parse_tacky(program_resolved).unwrap();
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);

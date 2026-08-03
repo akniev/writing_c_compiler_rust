@@ -1,2 +1,3 @@
 pub mod parser;
 pub mod ast_tokens;
+pub mod variable_resolution;

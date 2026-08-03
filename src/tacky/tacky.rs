@@ -1,9 +1,7 @@
 use crate::parser::ast_tokens::{ASTBinaryOperator, ASTExpression, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
+use crate::common::global_counter::{get_global_counter};
 
 pub fn parse_tacky(program: ASTProgram) -> Result<TProgram, String> {
     panic!("Not implemented");
@@ -93,7 +91,7 @@ fn make_temporary() -> String {
 }
 
 fn make_temporary_identifier(prefix: &str) -> String {
-    let id = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let id = get_global_counter();
     if prefix.is_empty() {
         format!("tmp.{}", id)
     } else {
@@ -102,7 +100,7 @@ fn make_temporary_identifier(prefix: &str) -> String {
 }
 
 fn make_label(prefix: &str) -> String {
-    let id = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let id = get_global_counter();
     format!("_{}_{}", prefix, id)
 }
 
