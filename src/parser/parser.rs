@@ -170,7 +170,7 @@ impl Parser {
 
     fn parse_factor(&mut self) -> Result<ASTExpression, String> {
         let next_token = self.peek().ok_or("unexpected end of input")?;
-        let mut result_opt: Option<ASTExpression> = None;
+        let mut result: ASTExpression;
         match next_token {
             LexerToken::Const(_) => {
                 let const_token = self.expect(LexerTokenKind::Const)?;
@@ -178,22 +178,22 @@ impl Parser {
                     LexerToken::Const(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result_opt = Some(ASTExpression::Constant(value));
+                result = ASTExpression::Constant(value);
             }
             LexerToken::Identifier(name) => {
                 self.take();
-                result_opt = Some(ASTExpression::Var(name.to_string()));
+                result = ASTExpression::Var(name.to_string());
             }
             LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark | LexerToken::Increment | LexerToken::Decrement => {
                 let operator = self.parse_unop()?;
                 let inner_exp = self.parse_factor()?;
-                result_opt = Some(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) });
+                result = ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) };
             }
             LexerToken::OpenParen => {
                 self.take();
                 let inner_exp = self.parse_expression(0)?;
                 self.expect(LexerTokenKind::CloseParen)?;
-                result_opt = Some(inner_exp);
+                result = inner_exp;
             }
             _ => {
                 panic!("unexpected token");
@@ -202,10 +202,8 @@ impl Parser {
 
         if self.peek() == Some(LexerToken::Increment) || self.peek() == Some(LexerToken::Decrement) {
             let postfix_operator = self.parse_postfix()?;
-            result_opt = Some(ASTExpression::Postfix { exp: Box::new(result_opt.unwrap()), op: postfix_operator });
+            result = ASTExpression::Postfix { exp: Box::new(result.clone()), op: postfix_operator };
         }
-
-        let result = result_opt.unwrap();
 
         Ok(result)
     }
