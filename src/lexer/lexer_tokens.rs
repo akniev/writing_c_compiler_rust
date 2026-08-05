@@ -35,6 +35,11 @@ pub enum LexerToken {
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    If,
+    Else,
+    QuestionMark,
+    Colon,
+
     // Extra credit
     PlusEqual,
     MinusEqual,
@@ -86,6 +91,11 @@ pub enum LexerTokenKind {
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    If,
+    Else,
+    QuestionMark,
+    Colon,
+
     // Extra credit
     PlusEqual,
     MinusEqual,
@@ -138,6 +148,11 @@ impl LexerToken {
             LexerToken::GreaterThan => LexerTokenKind::GreaterThan,
             LexerToken::LessThanOrEqual => LexerTokenKind::LessThanOrEqual,
             LexerToken::GreaterThanOrEqual => LexerTokenKind::GreaterThanOrEqual,
+            LexerToken::If => LexerTokenKind::If,
+            LexerToken::Else => LexerTokenKind::Else,
+            LexerToken::QuestionMark => LexerTokenKind::QuestionMark,
+            LexerToken::Colon => LexerTokenKind::Colon,
+
             // Extra credit
             LexerToken::PlusEqual => LexerTokenKind::PlusEqual,
             LexerToken::MinusEqual => LexerTokenKind::MinusEqual,
@@ -192,6 +207,11 @@ impl LexerTokenKind {
             Self::GreaterThan => r">",
             Self::LessThanOrEqual => r"<=",
             Self::GreaterThanOrEqual => r">=",
+            Self::If => r"^if\b",
+            Self::Else => r"^else\b",
+            Self::QuestionMark => r"\?",
+            Self::Colon => r":",
+
             // Extra credit
             Self::PlusEqual => r"\+=",
             Self::MinusEqual => r"\-=",
@@ -244,6 +264,11 @@ impl LexerTokenKind {
             LexerTokenKind::GreaterThan => LexerToken::GreaterThan,
             LexerTokenKind::LessThanOrEqual => LexerToken::LessThanOrEqual,
             LexerTokenKind::GreaterThanOrEqual => LexerToken::GreaterThanOrEqual,
+            LexerTokenKind::If => LexerToken::If,
+            LexerTokenKind::Else => LexerToken::Else,
+            LexerTokenKind::QuestionMark => LexerToken::QuestionMark,
+            LexerTokenKind::Colon => LexerToken::Colon,
+
             // Extra credit
             LexerTokenKind::PlusEqual => LexerToken::PlusEqual,
             LexerTokenKind::MinusEqual => LexerToken::MinusEqual,
@@ -296,6 +321,11 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::GreaterThan,
     LexerTokenKind::LessThanOrEqual,
     LexerTokenKind::GreaterThanOrEqual,
+    LexerTokenKind::If,
+    LexerTokenKind::Else,
+    LexerTokenKind::QuestionMark,
+    LexerTokenKind::Colon,
+
     // Extra credit
     LexerTokenKind::PlusEqual,
     LexerTokenKind::MinusEqual,
