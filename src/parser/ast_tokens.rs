@@ -51,6 +51,7 @@ pub enum ASTExpression {
     Postfix { op: ASTPostfixOperator, exp: Box<ASTExpression> },
     Binary { op: ASTBinaryOperator, lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
     Assignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
+    CompoundAssignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression>, operator: ASTBinaryOperator }
 }
 
 #[derive(Debug, Clone, PartialEq)]

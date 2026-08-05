@@ -142,6 +142,16 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
                 panic!("Unsupported assignment");
             }
         }
+        ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
+            let v1 = emit_tacky(lhs.as_ref(), instructions);
+            let v2 = emit_tacky(rhs.as_ref(), instructions);
+            let dst_name = make_temporary();
+            let dst = TValue::Var(dst_name);
+            let tacky_op = convert_binop(operator.clone());
+            instructions.push(TInstruction::Binary { op: tacky_op, src1: v1.clone(), src2: v2, dst: dst.clone() });
+            instructions.push(TInstruction::Copy { src: dst, dst: v1.clone() });
+            v1
+        }
         ASTExpression::Var(name) => {
             TValue::Var(name.clone())
         }

@@ -108,6 +108,14 @@ fn resolve_expression(
             let new_rhs = resolve_expression(*rhs, variable_map);
             ASTExpression::Assignment { lhs: Box::new(new_lhs), rhs: Box::new(new_rhs) }
         }
+        ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
+            if !matches!(lhs.as_ref(), ASTExpression::Var(_)) {
+                panic!("Left-hand side of assignment must be a variable");
+            }
+            let new_lhs = resolve_expression(*lhs, variable_map);
+            let new_rhs = resolve_expression(*rhs, variable_map);
+            ASTExpression::CompoundAssignment { lhs: Box::new(new_lhs), rhs: Box::new(new_rhs), operator }
+        }
         ASTExpression::Postfix { op, exp } => {
             if !matches!(exp.as_ref(), ASTExpression::Var(_)) {
                 panic!("Postfix operator must be applied to a variable");
