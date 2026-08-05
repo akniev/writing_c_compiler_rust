@@ -48,6 +48,7 @@ pub enum ASTExpression {
     Var(String),
     Constant(i32),
     Unary { op: ASTUnaryOperator, exp: Box<ASTExpression> },
+    Postfix { op: ASTPostfixOperator, exp: Box<ASTExpression> },
     Binary { op: ASTBinaryOperator, lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
     Assignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
 }
@@ -57,6 +58,14 @@ pub enum ASTUnaryOperator {
     Complement,
     Negate,
     Not,
+    Increment,
+    Decrement,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASTPostfixOperator {
+    Increment,
+    Decrement,
 }
 
 #[derive(Debug, Clone, PartialEq)]

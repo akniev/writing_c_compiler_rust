@@ -1,16 +1,17 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 
 /*
 <program> ::= <function>
-<function> ::= "int" <identifier> "(" "void" ")" "{" <statement> "}"
+<function> ::= "int" <identifier> "(" "void" ")" "{" { <block-item> } "}"
 <block-item> ::= <statement> | <declaration>
 <declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
 <statement> ::= "return" <exp> ";" | <exp> ";" | ";"
 <exp> ::= <factor> | <exp> <binop> <exp>
-<factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")"
-<unop> ::= "-" | "~"
-<binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">="
+<factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
+<unop> ::= "-" | "~" | "++" | "--"
+<postfix> ::= ++ | --
+<binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">=" | = | += | -= | *= | /= | %=
 <identifier> ::= ? An identifier token ?
 <int> ::= ? A constant token ?
  */
@@ -146,13 +147,16 @@ impl Parser {
                     lhs = ASTExpression::Binary { op: operator, lhs: Box::new(lhs), rhs: Box::new(rhs) };
                 }
             }
+
             next_token = self.peek();
         }
+
         Ok(lhs)
     }
 
     fn parse_factor(&mut self) -> Result<ASTExpression, String> {
         let next_token = self.peek().ok_or("unexpected end of input")?;
+        let mut result_opt: Option<ASTExpression> = None;
         match next_token {
             LexerToken::Const(_) => {
                 let const_token = self.expect(LexerTokenKind::Const)?;
@@ -160,27 +164,41 @@ impl Parser {
                     LexerToken::Const(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                Ok(ASTExpression::Constant(value))
+                result_opt = Some(ASTExpression::Constant(value));
+                // Ok(ASTExpression::Constant(value))
             }
             LexerToken::Identifier(name) => {
                 self.take();
-                Ok(ASTExpression::Var(name.to_string()))
+                result_opt = Some(ASTExpression::Var(name.to_string()));
+                // Ok(ASTExpression::Var(name.to_string()))
             }
-            LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark => {
+            LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark | LexerToken::Increment | LexerToken::Decrement => {
                 let operator = self.parse_unop()?;
                 let inner_exp = self.parse_factor()?;
-                Ok(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) })
+                result_opt = Some(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) });
+                // Ok(ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) })
             }
             LexerToken::OpenParen => {
                 self.take();
                 let inner_exp = self.parse_expression(0)?;
                 self.expect(LexerTokenKind::CloseParen)?;
-                Ok(inner_exp)
+                result_opt = Some(inner_exp);
+                // Ok(inner_exp)
             }
             _ => {
-                Err("unexpected token".to_string())
+                panic!("unexpected token");
+                //Err("unexpected token".to_string())
             }
         }
+
+        if self.peek() == Some(LexerToken::Increment) || self.peek() == Some(LexerToken::Decrement) {
+            let postfix_operator = self.parse_postfix()?;
+            result_opt = Some(ASTExpression::Postfix { exp: Box::new(result_opt.unwrap()), op: postfix_operator });
+        }
+
+        let result = result_opt.unwrap();
+
+        Ok(result)
     }
 
     fn precedence(token: &Option<LexerToken>) -> i32 {
@@ -239,7 +257,19 @@ impl Parser {
             LexerToken::Tilde => Ok(ASTUnaryOperator::Complement),
             LexerToken::Hyphen => Ok(ASTUnaryOperator::Negate),
             LexerToken::ExclamationMark => Ok(ASTUnaryOperator::Not),
+            LexerToken::Increment => Ok(ASTUnaryOperator::Increment),
+            LexerToken::Decrement => Ok(ASTUnaryOperator::Decrement),
             _ => Err("unexpected token".to_string()),
+        }
+    }
+
+    fn parse_postfix(&mut self) -> Result<ASTPostfixOperator, String> {
+        match self.take().unwrap() {
+            LexerToken::Increment => Ok(ASTPostfixOperator::Increment),
+            LexerToken::Decrement => Ok(ASTPostfixOperator::Decrement),
+            _ => {
+                panic!("unexpected token");
+            }
         }
     }
 

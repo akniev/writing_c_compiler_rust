@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_variable_name;
-use crate::parser::ast_tokens::{ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
     let mut variable_map: HashMap<String, String> = HashMap::new();
@@ -89,6 +89,9 @@ fn resolve_expression(
             ASTExpression::Constant(int)
         }
         ASTExpression::Unary { op, exp } => {
+            if matches!(op, ASTUnaryOperator::Increment | ASTUnaryOperator::Decrement) && !matches!(exp.as_ref(), ASTExpression::Var(_)) {
+                panic!("lvalue expected for increment/decrement operator");
+            }
             let new_exp = resolve_expression(*exp, variable_map);
             ASTExpression::Unary { op, exp: Box::new(new_exp) }
         }
@@ -104,6 +107,13 @@ fn resolve_expression(
             let new_lhs = resolve_expression(*lhs, variable_map);
             let new_rhs = resolve_expression(*rhs, variable_map);
             ASTExpression::Assignment { lhs: Box::new(new_lhs), rhs: Box::new(new_rhs) }
+        }
+        ASTExpression::Postfix { op, exp } => {
+            if !matches!(exp.as_ref(), ASTExpression::Var(_)) {
+                panic!("Postfix operator must be applied to a variable");
+            }
+            let new_exp = resolve_expression(*exp, variable_map);
+            ASTExpression::Postfix { op, exp: Box::new(new_exp) }
         }
     }
 }

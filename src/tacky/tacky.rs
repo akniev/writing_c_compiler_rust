@@ -1,4 +1,4 @@
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
@@ -70,6 +70,21 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
         ASTExpression::Constant(val) => {
             TValue::Constant(*val)
         }
+        ASTExpression::Unary {
+            op: op @ (ASTUnaryOperator::Increment | ASTUnaryOperator::Decrement),
+            exp
+        } => {
+            let var = emit_tacky(exp, instructions);
+            let increment = match op {
+                ASTUnaryOperator::Increment => TValue::Constant(1),
+                ASTUnaryOperator::Decrement => TValue::Constant(-1),
+                _ => panic!("Unsupported unary operator!")
+            };
+            let tmp = TValue::Var(make_temporary());
+            instructions.push(TInstruction::Binary { op: TBinaryOperator::Add, src1: increment, src2: var.clone(), dst: tmp.clone() });
+            instructions.push(TInstruction::Copy { src: tmp, dst: var.clone() });
+            var
+        }
         ASTExpression::Unary { op, exp} => {
             let src = emit_tacky(exp, instructions);
             let dst_name = make_temporary();
@@ -130,6 +145,19 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
         ASTExpression::Var(name) => {
             TValue::Var(name.clone())
         }
+        ASTExpression::Postfix { op, exp } => {
+            let increment = match op.clone() {
+                ASTPostfixOperator::Increment => TValue::Constant(1),
+                ASTPostfixOperator::Decrement => TValue::Constant(-1)
+            };
+            let var = emit_tacky(exp, instructions);
+            let tmp = TValue::Var(make_temporary());
+            let tmp2 = TValue::Var(make_temporary());
+            instructions.push(TInstruction::Copy { src: var.clone(), dst: tmp2.clone()});
+            instructions.push(TInstruction::Binary { op: TBinaryOperator::Add, src1: increment, src2: var.clone(), dst: tmp.clone()});
+            instructions.push(TInstruction::Copy { src: tmp.clone(), dst: var.clone()});
+            tmp2
+        }
     }
 }
 
@@ -156,6 +184,7 @@ fn convert_unop(op: ASTUnaryOperator) -> TUnaryOperator {
         ASTUnaryOperator::Negate => TUnaryOperator::Negate,
         ASTUnaryOperator::Complement => TUnaryOperator::Complement,
         ASTUnaryOperator::Not => TUnaryOperator::Not,
+        _ => panic!("Unsupported unary operator"),
     }
 }
 
