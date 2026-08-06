@@ -45,6 +45,9 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
         ASTStatement::Null => {
             // Do nothing
         }
+        _ => {
+            panic!("Unsupported statement");
+        }
     }
 
     instructions
@@ -167,6 +170,9 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
             instructions.push(TInstruction::Binary { op: TBinaryOperator::Add, src1: increment, src2: var.clone(), dst: tmp.clone()});
             instructions.push(TInstruction::Copy { src: tmp.clone(), dst: var.clone()});
             tmp2
+        }
+        _ => {
+            panic!("Unsupported expression");
         }
     }
 }

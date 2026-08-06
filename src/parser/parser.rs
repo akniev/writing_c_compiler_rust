@@ -1,13 +1,16 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
 use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
-
+use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
 <program> ::= <function>
 <function> ::= "int" <identifier> "(" "void" ")" "{" { <block-item> } "}"
 <block-item> ::= <statement> | <declaration>
 <declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
-<statement> ::= "return" <exp> ";" | <exp> ";" | ";"
-<exp> ::= <factor> | <exp> <binop> <exp>
+<statement> ::= "return" <exp> ";"
+              | <exp> ";"
+              | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
+              | ";"
+<exp> ::= <factor> | <exp> <binop> <exp> | <exp> "?" <exp> ":" <exp>
 <factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
 <unop> ::= "-" | "~" | "++" | "--"
 <postfix> ::= ++ | --
@@ -122,6 +125,21 @@ impl Parser {
                 self.take();
                 Ok(ASTStatement::Null)
             }
+            LexerToken::If => {
+                self.take();
+                self.expect(LexerTokenKind::OpenParen)?;
+                let condition = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::CloseParen)?;
+                let then_statement = self.parse_statement()?;
+                let else_statement = if self.peek() == Some(LexerToken::Else) {
+                    self.take();
+                    Some(self.parse_statement()?)
+                } else {
+                    None
+                };
+
+                Ok(ASTStatement::If { condition, then_statement: Box::new(then_statement), else_statement: else_statement.map(Box::new) })
+            }
             _ => {
                 let exp = self.parse_expression(0)?;
                 self.expect(LexerTokenKind::Semicolon)?;
@@ -154,6 +172,11 @@ impl Parser {
                     let operator = self.parse_binop()?;
                     let rhs = self.parse_expression(Self::precedence(&next_token))?;
                     lhs = ASTExpression::CompoundAssignment { lhs: Box::new(lhs), rhs: Box::new(rhs), operator };
+                }
+                Some(LexerToken::QuestionMark) => {
+                    let middle = self.parse_conditional_middle();
+                    let rhs = self.parse_expression(Self::precedence(&next_token))?;
+                    lhs = Conditional { condition: Box::new(lhs), if_true: Box::new(middle), if_false: Box::new(rhs) };
                 }
                 _ => {
                     let operator = self.parse_binop()?;
@@ -224,6 +247,7 @@ impl Parser {
             LexerToken::Pipe => 15, // |
             LexerToken::TwoAmpersands => 10, // &&
             LexerToken::TwoPipes => 5, // ||
+            LexerToken::QuestionMark => 3, // ?
             LexerToken::EqualSign |
             LexerToken::PlusEqual |
             LexerToken::MinusEqual |
@@ -250,6 +274,7 @@ impl Parser {
             | LexerToken::Asterisk
             | LexerToken::ForwardSlash
             | LexerToken::Percent
+            | LexerToken::QuestionMark
             | LexerToken::Ampersand
             | LexerToken::Pipe
             | LexerToken::Caret
@@ -334,6 +359,13 @@ impl Parser {
             LexerToken::RightShiftEqual => Ok(ASTBinaryOperator::ShiftRight),
             _ => Err("unexpected token".to_string()),
         }
+    }
+
+    fn parse_conditional_middle(&mut self) -> ASTExpression {
+        self.expect(LexerTokenKind::QuestionMark).unwrap();
+        let middle = self.parse_expression(0).unwrap();
+        self.expect(LexerTokenKind::Colon).unwrap();
+        middle
     }
 }
 

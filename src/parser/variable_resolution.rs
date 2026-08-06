@@ -53,6 +53,9 @@ fn resolve_statement(
         ASTStatement::Null => {
             ASTStatement::Null
         }
+        _ => {
+            panic!("Unsupported statement");
+        }
     }
 }
 
@@ -123,5 +126,8 @@ fn resolve_expression(
             let new_exp = resolve_expression(*exp, variable_map);
             ASTExpression::Postfix { op, exp: Box::new(new_exp) }
         }
+        _ => {
+            panic!("Unsupported expression");
+        }   
     }
 }
