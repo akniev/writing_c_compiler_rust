@@ -42,11 +42,30 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
         ASTStatement::Expression(exp) => {
             emit_tacky(exp, &mut instructions);
         }
+        ASTStatement::If { condition, then_statement, else_statement } => {
+            if let Some(else_statement) = else_statement {
+                let condition_val = emit_tacky(condition, &mut instructions);
+                let else_label = make_label("else_label");
+                let end_label = make_label("end_label");
+                instructions.push(TInstruction::JumpIfZero { val: condition_val, label: else_label.clone() });
+                let then_instructions = parse_statement(then_statement.as_ref());
+                instructions.extend(then_instructions);
+                instructions.push(TInstruction::Jump { label: end_label.clone() });
+                instructions.push(TInstruction::Label { label: else_label });
+                let else_instructions = parse_statement(else_statement.as_ref());
+                instructions.extend(else_instructions);
+                instructions.push(TInstruction::Label { label: end_label });
+            } else {
+                let condition_val = emit_tacky(condition, &mut instructions);
+                let end_label = make_label("end_label");
+                instructions.push(TInstruction::JumpIfZero { val: condition_val, label: end_label.clone() });
+                let then_instructions = parse_statement(then_statement.as_ref());
+                instructions.extend(then_instructions);
+                instructions.push(TInstruction::Label { label: end_label });
+            }
+        }
         ASTStatement::Null => {
             // Do nothing
-        }
-        _ => {
-            panic!("Unsupported statement");
         }
     }
 
@@ -171,8 +190,21 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
             instructions.push(TInstruction::Copy { src: tmp.clone(), dst: var.clone()});
             tmp2
         }
-        _ => {
-            panic!("Unsupported expression");
+        ASTExpression::Conditional { condition, if_true, if_false } => {
+            let condition_val = emit_tacky(condition, instructions);
+            let result_name = make_temporary_identifier("result");
+            let result = TValue::Var(result_name);
+            let e2_label = make_label("e2_label");
+            let end_label = make_label("end_label");
+            instructions.push(TInstruction::JumpIfZero { val: condition_val, label: e2_label.clone() });
+            let v1 = emit_tacky(if_true, instructions);
+            instructions.push(TInstruction::Copy { src: v1, dst: result.clone() });
+            instructions.push(TInstruction::Jump { label: end_label.clone() });
+            instructions.push(TInstruction::Label { label: e2_label });
+            let v2 = emit_tacky(if_false, instructions);
+            instructions.push(TInstruction::Copy { src: v2, dst: result.clone() });
+            instructions.push(TInstruction::Label { label: end_label });
+            result
         }
     }
 }
