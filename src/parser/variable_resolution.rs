@@ -53,8 +53,11 @@ fn resolve_statement(
         ASTStatement::Null => {
             ASTStatement::Null
         }
-        _ => {
-            panic!("Unsupported statement");
+        ASTStatement::If { condition, then_statement, else_statement } => {
+            let new_then_statement = resolve_statement(*then_statement, variable_map);
+            let new_else_statement = else_statement.map(|else_statement| resolve_statement(*else_statement, variable_map));
+            let new_condition = resolve_expression(condition.clone(), variable_map);
+            ASTStatement::If { condition: new_condition, then_statement: Box::new(new_then_statement), else_statement: new_else_statement.map(Box::new) }
         }
     }
 }
@@ -126,8 +129,11 @@ fn resolve_expression(
             let new_exp = resolve_expression(*exp, variable_map);
             ASTExpression::Postfix { op, exp: Box::new(new_exp) }
         }
-        _ => {
-            panic!("Unsupported expression");
-        }   
+        ASTExpression::Conditional { condition, if_true, if_false } => {
+            let new_condition = resolve_expression(*condition, variable_map);
+            let new_if_true = resolve_expression(*if_true, variable_map);
+            let new_if_false = resolve_expression(*if_false, variable_map);
+            ASTExpression::Conditional { condition: Box::new(new_condition), if_true: Box::new(new_if_true), if_false: Box::new(new_if_false) }
+        }
     }
 }
