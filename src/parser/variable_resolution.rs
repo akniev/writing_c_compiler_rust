@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_variable_name;
 use crate::parser::ast_tokens::{ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
     let mut variable_map: HashMap<String, String> = HashMap::new();
@@ -13,9 +14,11 @@ fn resolve_function_definition(
     variable_map: &mut HashMap<String, String>,
 ) -> ASTFunctionDefinition {
     let mut new_body = vec![];
+    let labels = get_labels(&function_definition);
+
 
     for block_item in function_definition.body {
-        new_body.push(resolve_block_item(block_item, variable_map))
+        new_body.push(resolve_block_item(block_item, variable_map, labels.as_ref()))
     }
 
     ASTFunctionDefinition { name: function_definition.name, body: new_body }
@@ -24,10 +27,11 @@ fn resolve_function_definition(
 fn resolve_block_item(
     block_item: ASTBlockItem,
     variable_map: &mut HashMap<String, String>,
+    labels: &Vec<String>,
 ) -> ASTBlockItem {
     match block_item {
         ASTBlockItem::Statement(statement) => {
-            let new_statement = resolve_statement(statement, variable_map);
+            let new_statement = resolve_statement(statement, variable_map, labels);
             ASTBlockItem::Statement(new_statement)
         }
         ASTBlockItem::Declaration(declaration) => {
@@ -39,7 +43,8 @@ fn resolve_block_item(
 
 fn resolve_statement(
     statement: ASTStatement,
-    variable_map: &mut HashMap<String, String>
+    variable_map: &mut HashMap<String, String>,
+    labels: &Vec<String>,
 ) -> ASTStatement {
     match statement {
         ASTStatement::Return(exp) => {
@@ -54,10 +59,20 @@ fn resolve_statement(
             ASTStatement::Null
         }
         ASTStatement::If { condition, then_statement, else_statement } => {
-            let new_then_statement = resolve_statement(*then_statement, variable_map);
-            let new_else_statement = else_statement.map(|else_statement| resolve_statement(*else_statement, variable_map));
+            let new_then_statement = resolve_statement(*then_statement, variable_map, labels);
+            let new_else_statement = else_statement.map(|else_statement| resolve_statement(*else_statement, variable_map, labels));
             let new_condition = resolve_expression(condition.clone(), variable_map);
             ASTStatement::If { condition: new_condition, then_statement: Box::new(new_then_statement), else_statement: new_else_statement.map(Box::new) }
+        }
+        ASTStatement::Goto { label } => {
+            if !labels.contains(&label) {
+                panic!("Label {} is not defined", label);
+            }
+            ASTStatement::Goto { label }
+        }
+        ASTStatement::LabelledStatement { label, statement } => {
+            let new_statement = resolve_statement(*statement, variable_map, labels);
+            ASTStatement::LabelledStatement { label, statement: Box::new(new_statement) }
         }
     }
 }

@@ -64,6 +64,14 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
                 instructions.push(TInstruction::Label { label: end_label });
             }
         }
+        ASTStatement::Goto { label } => {
+            instructions.push(TInstruction::Jump { label: label.clone() });
+        }
+        ASTStatement::LabelledStatement { label, statement } => {
+            instructions.push(TInstruction::Label { label: label.clone() });
+            let statement_instructions = parse_statement(statement.as_ref());
+            instructions.extend(statement_instructions);
+        }
         ASTStatement::Null => {
             // Do nothing
         }

@@ -51,6 +51,8 @@ pub enum LexerToken {
     CaretEqual,
     LeftShiftEqual,
     RightShiftEqual,
+    Goto,
+
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -107,6 +109,8 @@ pub enum LexerTokenKind {
     CaretEqual,
     LeftShiftEqual,
     RightShiftEqual,
+    Goto,
+
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
     CompilerDirective,
@@ -164,6 +168,8 @@ impl LexerToken {
             LexerToken::CaretEqual => LexerTokenKind::CaretEqual,
             LexerToken::LeftShiftEqual => LexerTokenKind::LeftShiftEqual,
             LexerToken::RightShiftEqual => LexerTokenKind::RightShiftEqual,
+            LexerToken::Goto => LexerTokenKind::Goto,
+
             // We need them to be able to remove them from code because we don't need them yet
             LexerToken::Comment => LexerTokenKind::Comment,
             LexerToken::CompilerDirective => LexerTokenKind::CompilerDirective,
@@ -223,6 +229,8 @@ impl LexerTokenKind {
             Self::CaretEqual => r"\^=",
             Self::LeftShiftEqual => r"<<=",
             Self::RightShiftEqual => r">>=",
+            Self::Goto => r"^goto\b",
+
             // We need them to be able to remove them from code because we don't need them yet
             Self::Comment => r"^(?://[^\r\n]*|/\*[\s\S]*?\*/)",
             Self::CompilerDirective => r"(?m)^#[^\r\n]*",
@@ -280,6 +288,8 @@ impl LexerTokenKind {
             LexerTokenKind::CaretEqual => LexerToken::CaretEqual,
             LexerTokenKind::LeftShiftEqual => LexerToken::LeftShiftEqual,
             LexerTokenKind::RightShiftEqual => LexerToken::RightShiftEqual,
+            LexerTokenKind::Goto => LexerToken::Goto,
+
             // We need them to be able to remove them from code because we don't need them yet
             LexerTokenKind::Comment => LexerToken::Comment,
             LexerTokenKind::CompilerDirective => LexerToken::CompilerDirective,
@@ -337,6 +347,8 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::CaretEqual,
     LexerTokenKind::LeftShiftEqual,
     LexerTokenKind::RightShiftEqual,
+    LexerTokenKind::Goto,
+
     // We need them to be able to remove them from code because we don't need them yet
     LexerTokenKind::Comment,
     LexerTokenKind::CompilerDirective,

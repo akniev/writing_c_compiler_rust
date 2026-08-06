@@ -10,6 +10,8 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
               | <exp> ";"
               | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
               | ";"
+              | <identifier> ":" <statement>
+              | "goto" <identifier> ";"
 <exp> ::= <factor> | <exp> <binop> <exp> | <exp> "?" <exp> ":" <exp>
 <factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
 <unop> ::= "-" | "~" | "++" | "--"
@@ -42,6 +44,10 @@ impl Parser {
 
     fn peek(&mut self) -> Option<LexerToken> {
         self.tokens.get(self.cursor).cloned()
+    }
+
+    fn peek_n(&mut self, n: usize) -> Option<LexerToken> {
+        self.tokens.get(self.cursor + n).cloned()
     }
 
     fn parse_function(&mut self) -> Result<ASTFunctionDefinition, String> {
@@ -114,6 +120,7 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Result<ASTStatement, String> {
         let next_token = self.peek().ok_or("unexpected end of input")?;
+        let next_next_token = self.peek_n(1);
         match next_token {
             LexerToken::Return => {
                 self.expect(LexerTokenKind::Return)?;
@@ -139,6 +146,22 @@ impl Parser {
                 };
 
                 Ok(ASTStatement::If { condition, then_statement: Box::new(then_statement), else_statement: else_statement.map(Box::new) })
+            }
+            LexerToken::Goto => {
+                self.take();
+                let label = self.expect(LexerTokenKind::Identifier)?;
+                let label_name = match label {
+                    LexerToken::Identifier(name) => name,
+                    _ => unreachable!("expected identifier, found {label:?}"),
+                };
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::Goto { label: label_name })
+            }
+            LexerToken::Identifier(label_name) if next_next_token == Some(LexerToken::Colon) => {
+                self.take();
+                self.take();
+                let statement = self.parse_statement()?;
+                Ok(ASTStatement::LabelledStatement { label: label_name, statement: Box::new(statement) })
             }
             _ => {
                 let exp = self.parse_expression(0)?;

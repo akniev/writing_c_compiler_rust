@@ -6,6 +6,8 @@ block_item = S(statement) | D(declaration)
 statement = Return(exp)
           | Expression(exp)
           | If(exp condition, statement then, statement? else)
+          | LabelledStatement(identifier label, statement)
+          | Goto(identifier label)
           | Null
 declaration = Declaration(identifier name, exp? init)
 exp = Constant(int)
@@ -42,6 +44,8 @@ pub enum ASTStatement {
     Return(ASTExpression),
     Expression(ASTExpression),
     If { condition: ASTExpression, then_statement: Box<ASTStatement>, else_statement: Option<Box<ASTStatement>> },
+    LabelledStatement { label: String, statement: Box<ASTStatement> },
+    Goto { label: String },
     Null,
 }
 
