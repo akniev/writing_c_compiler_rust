@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use crate::common::global_counter::get_unique_variable_name;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::common::global_counter::get_unique_label;
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator, ForInit};
 use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
@@ -95,6 +95,25 @@ fn resolve_statement(
             let new_condition = resolve_expression(condition.clone(), variable_map);
             ASTStatement::While { condition: new_condition, body: Box::new(new_body), label }
         }
+        ASTStatement::DoWhile { condition, body, label } => {
+            let body = body.as_ref();
+            let new_body = resolve_statement(body.clone(), variable_map, labels);
+            let new_condition = resolve_expression(condition.clone(), variable_map);
+            ASTStatement::DoWhile { condition: new_condition, body: Box::new(new_body), label }
+        }
+        ASTStatement::For { init, condition, post: _, body, label } => {
+            let mut for_init_variable_map = variable_map.clone();
+            clear_current_scope_flag(&mut for_init_variable_map);
+            let new_init = resolve_forinit(init, &mut for_init_variable_map);
+
+            let new_condition = condition.clone().map(|object|resolve_expression(object, &mut for_init_variable_map));
+            let new_post = condition.map(|object|resolve_expression(object, &mut for_init_variable_map));
+
+            let mut for_body_variable_map = for_init_variable_map.clone();
+            clear_current_scope_flag(&mut for_body_variable_map);
+            let new_body = resolve_statement(body.as_ref().clone(), &mut for_body_variable_map, labels);
+            ASTStatement::For { init: new_init, condition: new_condition, post: new_post, body: Box::new(new_body), label }
+        }
         ASTStatement::Break { label } => {
             ASTStatement::Break { label }
         }
@@ -115,8 +134,18 @@ fn resolve_statement(
             let new_statement = resolve_statement(*statement, variable_map, labels);
             ASTStatement::LabelledStatement { label, statement: Box::new(new_statement) }
         }
-        _ => {
-            unreachable!()
+    }
+}
+
+fn resolve_forinit(init: ForInit, variable_map: &mut VariableMap) -> ForInit {
+    match init {
+        ForInit::InitDecl(declaration) => {
+            let new_declaration = resolve_declaration(declaration, variable_map);
+            ForInit::InitDecl(new_declaration)
+        }
+        ForInit::InitExp(expression) => {
+            let new_expression = expression.map(|object|resolve_expression(object, variable_map));
+            ForInit::InitExp(new_expression)
         }
     }
 }
@@ -130,7 +159,7 @@ fn resolve_declaration(
             if variable_map.contains_key(&name) && variable_map.get(&name).unwrap().from_current_scope {
                 panic!("Variable {} is already defined", name);
             }
-            let unique_name = get_unique_variable_name(&name);
+            let unique_name = get_unique_label(&name);
             variable_map.insert(name, VariableMapEntry { name: unique_name.clone(), from_current_scope: true });
             let new_init = init.map(|init| resolve_expression(init, variable_map));
             ASTDeclaration::VariableDeclaration { name: unique_name, init: new_init }

@@ -13,6 +13,7 @@ use crate::assembly::code_emission::generate_code;
 use crate::assembly::fix_mov::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
 use crate::lexer::lexer::tokenize;
+use crate::parser::loop_labeling::label_loops;
 use crate::parser::parser::parse;
 use crate::parser::variable_resolution::resolve_variables;
 use crate::tacky::tacky::parse_tacky;
@@ -66,16 +67,21 @@ fn main() {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
-        println!("{:?}", program_resolved);
+        let program_loops_labelled = label_loops(program_resolved);
+        println!("{:?}", program_loops_labelled);
     } else if args.tacky {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
-        let tacky = parse_tacky(program).unwrap();
+        let program_resolved = resolve_variables(program);
+        let program_loops_labelled = label_loops(program_resolved);
+        let tacky = parse_tacky(program_loops_labelled).unwrap();
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
-        let tacky = parse_tacky(program).unwrap();
+        let program_resolved = resolve_variables(program);
+        let program_loops_labelled = label_loops(program_resolved);
+        let tacky = parse_tacky(program_loops_labelled).unwrap();
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
@@ -84,10 +90,11 @@ fn main() {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
+        let program_loops_labelled = label_loops(program_resolved);
         println!("AST:");
-        println!("{:?}", program_resolved);
+        println!("{:?}", program_loops_labelled);
 
-        let tacky = parse_tacky(program_resolved).unwrap();
+        let tacky = parse_tacky(program_loops_labelled).unwrap();
         println!("Tacky:");
         println!("{:?}", tacky);
 

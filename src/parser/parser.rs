@@ -178,9 +178,9 @@ impl Parser {
             }
             LexerToken::While => {
                 self.take();
-                self.expect(LexerTokenKind::OpenParen);
+                _ = self.expect(LexerTokenKind::OpenParen);
                 let condition = self.parse_expression(0)?;
-                self.expect(LexerTokenKind::CloseParen);
+                _ = self.expect(LexerTokenKind::CloseParen);
                 let body = self.parse_statement()?;
                 Ok(ASTStatement::While { condition, body: Box::new(body), label: "-".to_string() })
             }

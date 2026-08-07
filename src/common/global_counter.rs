@@ -6,7 +6,7 @@ pub fn get_global_counter() -> i32 {
     GLOBAL_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-pub fn get_unique_variable_name(prefix: &str) -> String {
+pub fn get_unique_label(prefix: &str) -> String {
     let counter = get_global_counter();
     format!("{}.{}", prefix, counter)
 }
