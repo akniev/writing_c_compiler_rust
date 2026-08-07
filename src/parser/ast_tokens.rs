@@ -1,11 +1,13 @@
 
 /*
 program = Program(function_definition)
-function_definition = Function(identifier name, block_item* body)
+function_definition = Function(identifier name, block body)
 block_item = S(statement) | D(declaration)
+block = Block(block_item*)
 statement = Return(exp)
           | Expression(exp)
           | If(exp condition, statement then, statement? else)
+          | Compound(block)
           | LabelledStatement(identifier label, statement)
           | Goto(identifier label)
           | Null
@@ -30,7 +32,12 @@ pub struct ASTProgram {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ASTFunctionDefinition {
     pub name: String,
-    pub body: Vec<ASTBlockItem>
+    pub body: ASTBlock,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ASTBlock {
+    pub items: Vec<ASTBlockItem>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,6 +51,7 @@ pub enum ASTStatement {
     Return(ASTExpression),
     Expression(ASTExpression),
     If { condition: ASTExpression, then_statement: Box<ASTStatement>, else_statement: Option<Box<ASTStatement>> },
+    Compound(ASTBlock),
     LabelledStatement { label: String, statement: Box<ASTStatement> },
     Goto { label: String },
     Null,

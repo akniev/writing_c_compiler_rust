@@ -3,7 +3,7 @@ use crate::parser::ast_tokens::{ASTBlockItem, ASTFunctionDefinition, ASTStatemen
 pub fn get_labels(function_definition: &ASTFunctionDefinition) -> Vec<String> {
     let mut labels = Vec::new();
 
-    for block_item in &function_definition.body {
+    for block_item in &function_definition.body.items {
         labels.extend(extract_labels_from_block_item(block_item));
     }
 
@@ -43,6 +43,13 @@ fn extract_labels_from_statement(statement: &ASTStatement) -> Vec<String> {
             labels.extend(extract_labels_from_statement(then_statement.as_ref()));
             if let Some(else_statement) = else_statement {
                 labels.extend(extract_labels_from_statement(else_statement.as_ref()));
+            }
+            labels
+        }
+        ASTStatement::Compound(block) => {
+            let mut labels = Vec::new();
+            for block_item in &block.items {
+                labels.extend(extract_labels_from_block_item(block_item));
             }
             labels
         }

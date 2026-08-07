@@ -1,4 +1,4 @@
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
@@ -10,14 +10,19 @@ pub fn parse_tacky(program: ASTProgram) -> Result<TProgram, String> {
 }
 
 fn parse_function(function: ASTFunctionDefinition) -> Result<TFunctionDefinition, String> {
-    let mut function_body: Vec<TInstruction> = function
-        .body
+    let mut function_instructions = parse_block(&function.body);
+    function_instructions.push(TInstruction::Return(TValue::Constant(0)));
+    let t_function = TFunctionDefinition { name: function.name, body: function_instructions };
+    Ok(t_function)
+}
+
+fn parse_block(block: &ASTBlock) -> Vec<TInstruction> {
+    let function_body: Vec<TInstruction> = block
+        .items
         .iter()
         .flat_map(|block_item| parse_block_item(block_item))
         .collect();
-    function_body.push(TInstruction::Return(TValue::Constant(0)));
-    let t_function = TFunctionDefinition { name: function.name, body: function_body };
-    Ok(t_function)
+    function_body
 }
 
 fn parse_block_item(block_item: &ASTBlockItem) -> Vec<TInstruction> {
@@ -63,6 +68,10 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
                 instructions.extend(then_instructions);
                 instructions.push(TInstruction::Label { label: end_label });
             }
+        }
+        ASTStatement::Compound(block) => {
+            let block_instructions = parse_block(block);
+            instructions.extend(block_instructions);
         }
         ASTStatement::Goto { label } => {
             instructions.push(TInstruction::Jump { label: label.clone() });

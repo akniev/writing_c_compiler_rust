@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_variable_name;
-use crate::parser::ast_tokens::{ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
@@ -13,15 +13,23 @@ fn resolve_function_definition(
     function_definition: ASTFunctionDefinition,
     variable_map: &mut HashMap<String, String>,
 ) -> ASTFunctionDefinition {
-    let mut new_body = vec![];
     let labels = get_labels(&function_definition);
+    let new_body = resolve_block(function_definition.body, variable_map, labels.as_ref());
+    ASTFunctionDefinition { name: function_definition.name, body: new_body }
+}
 
+fn resolve_block(
+    block: ASTBlock,
+    variable_map: &mut HashMap<String, String>,
+    labels: &Vec<String>,
+) -> ASTBlock {
+    let mut new_items = vec![];
 
-    for block_item in function_definition.body {
-        new_body.push(resolve_block_item(block_item, variable_map, labels.as_ref()))
+    for block_item in block.items {
+        new_items.push(resolve_block_item(block_item, variable_map, labels.as_ref()))
     }
 
-    ASTFunctionDefinition { name: function_definition.name, body: new_body }
+    ASTBlock { items: new_items }   
 }
 
 fn resolve_block_item(
@@ -63,6 +71,10 @@ fn resolve_statement(
             let new_else_statement = else_statement.map(|else_statement| resolve_statement(*else_statement, variable_map, labels));
             let new_condition = resolve_expression(condition.clone(), variable_map);
             ASTStatement::If { condition: new_condition, then_statement: Box::new(new_then_statement), else_statement: new_else_statement.map(Box::new) }
+        }
+        ASTStatement::Compound(block) => {
+            let new_block = resolve_block(block, variable_map, labels);
+            ASTStatement::Compound(new_block)
         }
         ASTStatement::Goto { label } => {
             if !labels.contains(&label) {

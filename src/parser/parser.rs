@@ -1,9 +1,10 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
 <program> ::= <function>
-<function> ::= "int" <identifier> "(" "void" ")" "{" { <block-item> } "}"
+<function> ::= "int" <identifier> "(" "void" ")" <block>
+<block> ::= "{" { <block-item> } "}"
 <block-item> ::= <statement> | <declaration>
 <declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
 <statement> ::= "return" <exp> ";"
@@ -11,6 +12,7 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
               | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
               | ";"
               | <identifier> ":" <statement>
+              | <block>
               | "goto" <identifier> ";"
 <exp> ::= <factor> | <exp> <binop> <exp> | <exp> "?" <exp> ":" <exp>
 <factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
@@ -62,16 +64,27 @@ impl Parser {
         self.expect(LexerTokenKind::CloseParen)?;
         self.expect(LexerTokenKind::OpenBrace)?;
 
-        let mut function_body: Vec<ASTBlockItem> = vec![];
+        let mut block_items: Vec<ASTBlockItem> = vec![];
 
         while self.peek() != Some(LexerToken::CloseBrace) {
             let block_item = self.parse_block_item()?;
-            function_body.push(block_item);
+            block_items.push(block_item);
         }
 
         //let statement = self.parse_statement()?;
         self.expect(LexerTokenKind::CloseBrace)?;
-        Ok(ASTFunctionDefinition { name, body: function_body })
+        Ok(ASTFunctionDefinition { name, body: ASTBlock { items: block_items } })
+    }
+
+    fn parse_block(&mut self) -> Result<ASTBlock, String> {
+        self.expect(LexerTokenKind::OpenBrace)?;
+        let mut block_items: Vec<ASTBlockItem> = vec![];
+        while self.peek() != Some(LexerToken::CloseBrace) {
+            let block_item = self.parse_block_item();
+            block_items.push(block_item?);
+        }
+        self.expect(LexerTokenKind::CloseBrace)?;
+        Ok(ASTBlock { items: block_items })
     }
 
     fn parse_block_item(&mut self) -> Result<ASTBlockItem, String> {
@@ -146,6 +159,10 @@ impl Parser {
                 };
 
                 Ok(ASTStatement::If { condition, then_statement: Box::new(then_statement), else_statement: else_statement.map(Box::new) })
+            }
+            LexerToken::OpenBrace => {
+                let block = self.parse_block()?;
+                Ok(ASTStatement::Compound(block))
             }
             LexerToken::Goto => {
                 self.take();
