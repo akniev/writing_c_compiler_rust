@@ -4,14 +4,14 @@ use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpre
 use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
-    let mut variable_map: HashMap<String, String> = HashMap::new();
+    let mut variable_map: VariableMap = HashMap::new();
     let new_function_definition = resolve_function_definition(program.function_definition, &mut variable_map);
     ASTProgram { function_definition: new_function_definition }
 }
 
 fn resolve_function_definition(
     function_definition: ASTFunctionDefinition,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
 ) -> ASTFunctionDefinition {
     let labels = get_labels(&function_definition);
     let new_body = resolve_block(function_definition.body, variable_map, labels.as_ref());
@@ -20,21 +20,30 @@ fn resolve_function_definition(
 
 fn resolve_block(
     block: ASTBlock,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
     labels: &Vec<String>,
 ) -> ASTBlock {
+    let mut new_variable_map = variable_map.clone();
+    clear_current_scope_flag(&mut new_variable_map);
+
     let mut new_items = vec![];
 
     for block_item in block.items {
-        new_items.push(resolve_block_item(block_item, variable_map, labels.as_ref()))
+        new_items.push(resolve_block_item(block_item, &mut new_variable_map, labels.as_ref()))
     }
 
-    ASTBlock { items: new_items }   
+    ASTBlock { items: new_items }
+}
+
+fn clear_current_scope_flag(variable_map: &mut VariableMap) {
+    for entry in variable_map.values_mut() {
+        entry.from_current_scope = false;
+    }
 }
 
 fn resolve_block_item(
     block_item: ASTBlockItem,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
     labels: &Vec<String>,
 ) -> ASTBlockItem {
     match block_item {
@@ -49,9 +58,17 @@ fn resolve_block_item(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct VariableMapEntry {
+    name: String,
+    from_current_scope: bool,
+}
+
+type VariableMap = HashMap<String, VariableMapEntry>;
+
 fn resolve_statement(
     statement: ASTStatement,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
     labels: &Vec<String>,
 ) -> ASTStatement {
     match statement {
@@ -91,15 +108,15 @@ fn resolve_statement(
 
 fn resolve_declaration(
     declaration: ASTDeclaration,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
 ) -> ASTDeclaration {
     match declaration {
         ASTDeclaration::VariableDeclaration { name, init } => {
-            if variable_map.contains_key(&name) {
+            if variable_map.contains_key(&name) && variable_map.get(&name).unwrap().from_current_scope {
                 panic!("Variable {} is already defined", name);
             }
             let unique_name = get_unique_variable_name(&name);
-            variable_map.insert(name, unique_name.clone());
+            variable_map.insert(name, VariableMapEntry { name: unique_name.clone(), from_current_scope: true });
             let new_init = init.map(|init| resolve_expression(init, variable_map));
             ASTDeclaration::VariableDeclaration { name: unique_name, init: new_init }
         }
@@ -108,15 +125,12 @@ fn resolve_declaration(
 
 fn resolve_expression(
     exp: ASTExpression,
-    variable_map: &mut HashMap<String, String>,
+    variable_map: &mut VariableMap,
 ) -> ASTExpression {
     match exp {
         ASTExpression::Var(name) => {
-            if let Some(unique_name) = variable_map.get(&name) {
-                return ASTExpression::Var(unique_name.clone());
-            } else {
-                panic!("Variable {} is not defined", name);
-            }
+            let unique_name = variable_map.get(&name).unwrap().name.clone();
+            ASTExpression::Var(unique_name.clone())
         }
         ASTExpression::Constant(int) => {
             ASTExpression::Constant(int)
