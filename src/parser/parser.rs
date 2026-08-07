@@ -1,5 +1,5 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ForInit};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
 <program> ::= <function>
@@ -7,12 +7,18 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
 <block> ::= "{" { <block-item> } "}"
 <block-item> ::= <statement> | <declaration>
 <declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
+<for-init> ::= <declaration> | [ <exp> ] ";"
 <statement> ::= "return" <exp> ";"
               | <exp> ";"
               | "if" "(" <exp> ")" <statement> [ "else" <statement> ]
               | ";"
               | <identifier> ":" <statement>
               | <block>
+              | "break" ";"
+              | "continue" ";"
+              | "while" "(" <exp> ")" <statement>
+              | "do" <statement> "while" "(" <exp> ")" ";"
+              | for "(" <for-init> [ <exp> ] ";" [ <exp> ] ")" <statement>
               | "goto" <identifier> ";"
 <exp> ::= <factor> | <exp> <binop> <exp> | <exp> "?" <exp> ":" <exp>
 <factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
@@ -160,6 +166,45 @@ impl Parser {
 
                 Ok(ASTStatement::If { condition, then_statement: Box::new(then_statement), else_statement: else_statement.map(Box::new) })
             }
+            LexerToken::Break => {
+                self.take();
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::Break { label: "-".to_string() })
+            }
+            LexerToken::Continue => {
+                self.take();
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::Continue { label: "-".to_string() })
+            }
+            LexerToken::While => {
+                self.take();
+                self.expect(LexerTokenKind::OpenParen);
+                let condition = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::CloseParen);
+                let body = self.parse_statement()?;
+                Ok(ASTStatement::While { condition, body: Box::new(body), label: "-".to_string() })
+            }
+            LexerToken::Do => {
+                self.take();
+                let body = self.parse_statement()?;
+                self.expect(LexerTokenKind::While)?;
+                self.expect(LexerTokenKind::OpenParen)?;
+                let condition = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::CloseParen)?;
+                self.expect(LexerTokenKind::Semicolon)?;
+                Ok(ASTStatement::DoWhile { body: Box::new(body), condition, label: "-".to_string() })
+            }
+            LexerToken::For => {
+                self.take();
+                self.expect(LexerTokenKind::OpenParen)?;
+                let for_init = self.parse_for_init();
+                let cond = self.parse_optional_expression(0, LexerTokenKind::Semicolon);
+                self.expect(LexerTokenKind::Semicolon)?;
+                let post = self.parse_optional_expression(0, LexerTokenKind::CloseParen);
+                self.expect(LexerTokenKind::CloseParen)?;
+                let body = self.parse_statement()?;
+                Ok(ASTStatement::For { init: for_init, condition: cond, post: post, body: Box::new(body), label: "-".to_string() })
+            }
             LexerToken::OpenBrace => {
                 let block = self.parse_block()?;
                 Ok(ASTStatement::Compound(block))
@@ -187,6 +232,34 @@ impl Parser {
             }
         }
 
+    }
+
+    fn parse_for_init(&mut self) -> ForInit {
+        let next_token = self.peek();
+        if next_token != None && next_token.unwrap().kind().is_type_token() {
+            let decl = self.parse_declaration().unwrap();
+            ForInit::InitDecl(decl)
+        } else {
+            let exp = self.parse_optional_expression(0, LexerTokenKind::Semicolon);
+            _ = self.expect(LexerTokenKind::Semicolon);
+            ForInit::InitExp(exp)
+        }
+    }
+
+    fn parse_optional_expression(&mut self, min_prec: i32, terminator: LexerTokenKind) -> Option<ASTExpression> {
+        let next_token = self.peek();
+        match next_token {
+            Some(token) => {
+                if token.kind() == terminator {
+                    return None;
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+
+        self.parse_expression(min_prec).ok()
     }
 
     fn parse_expression(&mut self, min_prec: i32) -> Result<ASTExpression, String> {
@@ -416,4 +489,13 @@ pub fn parse(tokens: Vec<LexerToken>) -> Result<ASTProgram, String> {
         return Err("unexpected tokens".to_string());
     }
     Ok(ASTProgram { function_definition })
+}
+
+impl LexerTokenKind {
+    fn is_type_token(self) -> bool {
+        match self {
+            LexerTokenKind::Int => true,
+            _ => false,
+        }
+    }
 }

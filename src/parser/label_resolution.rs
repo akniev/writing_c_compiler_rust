@@ -46,6 +46,17 @@ fn extract_labels_from_statement(statement: &ASTStatement) -> Vec<String> {
             }
             labels
         }
+        ASTStatement::While { condition: _, body, label: _ } => {
+            let mut labels = Vec::new();
+            labels.extend(extract_labels_from_statement(body.as_ref()));
+            labels
+        }
+        ASTStatement::Break { label: _ } => {
+            vec![]
+        }
+        ASTStatement::Continue { label: _ } => {
+            vec![]
+        }
         ASTStatement::Compound(block) => {
             let mut labels = Vec::new();
             for block_item in &block.items {
@@ -64,5 +75,8 @@ fn extract_labels_from_statement(statement: &ASTStatement) -> Vec<String> {
         ASTStatement::Null => {
             vec![]
         }
+        _ => {
+            panic!("Unexpected statement type");
+        }   
     }
 }

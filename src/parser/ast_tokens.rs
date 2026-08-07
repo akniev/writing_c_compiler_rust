@@ -4,14 +4,20 @@ program = Program(function_definition)
 function_definition = Function(identifier name, block body)
 block_item = S(statement) | D(declaration)
 block = Block(block_item*)
+declaration = Declaration(identifier name, exp? init)
+for_init = InitDecl(declaration) | InitExp(exp?)
 statement = Return(exp)
           | Expression(exp)
           | If(exp condition, statement then, statement? else)
           | Compound(block)
+          | Break(identifier label)
+          | Continue(identifier label)
+          | While(exp condition, statement body, identifier label)
+          | DoWhile(statement body, exp condition, identifier label)
+          | For(for_init init, exp? condition, exp? post, statement body, identifier label)
           | LabelledStatement(identifier label, statement)
           | Goto(identifier label)
           | Null
-declaration = Declaration(identifier name, exp? init)
 exp = Constant(int)
     | Var(identifier)
     | Unary(unary_operator, exp)
@@ -36,6 +42,12 @@ pub struct ASTFunctionDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ForInit {
+    InitDecl(ASTDeclaration),
+    InitExp(Option<ASTExpression>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ASTBlock {
     pub items: Vec<ASTBlockItem>,
 }
@@ -52,6 +64,17 @@ pub enum ASTStatement {
     Expression(ASTExpression),
     If { condition: ASTExpression, then_statement: Box<ASTStatement>, else_statement: Option<Box<ASTStatement>> },
     Compound(ASTBlock),
+    Break { label: String },
+    Continue { label: String },
+    While { condition: ASTExpression, body: Box<ASTStatement>, label: String },
+    DoWhile { body: Box<ASTStatement>, condition: ASTExpression, label: String },
+    For {
+        init: ForInit,
+        condition: Option<ASTExpression>,
+        post: Option<ASTExpression>,
+        body: Box<ASTStatement>,
+        label: String
+    },
     LabelledStatement { label: String, statement: Box<ASTStatement> },
     Goto { label: String },
     Null,

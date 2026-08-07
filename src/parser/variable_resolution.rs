@@ -89,6 +89,18 @@ fn resolve_statement(
             let new_condition = resolve_expression(condition.clone(), variable_map);
             ASTStatement::If { condition: new_condition, then_statement: Box::new(new_then_statement), else_statement: new_else_statement.map(Box::new) }
         }
+        ASTStatement::While { condition, body, label } => {
+            let body = body.as_ref();
+            let new_body = resolve_statement(body.clone(), variable_map, labels);
+            let new_condition = resolve_expression(condition.clone(), variable_map);
+            ASTStatement::While { condition: new_condition, body: Box::new(new_body), label }
+        }
+        ASTStatement::Break { label } => {
+            ASTStatement::Break { label }
+        }
+        ASTStatement::Continue { label } => {
+            ASTStatement::Continue { label }
+        }
         ASTStatement::Compound(block) => {
             let new_block = resolve_block(block, variable_map, labels);
             ASTStatement::Compound(new_block)
@@ -102,6 +114,9 @@ fn resolve_statement(
         ASTStatement::LabelledStatement { label, statement } => {
             let new_statement = resolve_statement(*statement, variable_map, labels);
             ASTStatement::LabelledStatement { label, statement: Box::new(new_statement) }
+        }
+        _ => {
+            unreachable!()
         }
     }
 }

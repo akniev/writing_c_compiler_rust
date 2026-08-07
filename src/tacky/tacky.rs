@@ -84,6 +84,9 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
         ASTStatement::Null => {
             // Do nothing
         }
+        _ => {
+            panic!("Unsupported statement");
+        }   
     }
 
     instructions
