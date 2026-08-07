@@ -39,6 +39,11 @@ pub enum LexerToken {
     Else,
     QuestionMark,
     Colon,
+    Do,
+    While,
+    For,
+    Break,
+    Continue,
 
     // Extra credit
     PlusEqual,
@@ -97,6 +102,11 @@ pub enum LexerTokenKind {
     Else,
     QuestionMark,
     Colon,
+    Do,
+    While,
+    For,
+    Break,
+    Continue,
 
     // Extra credit
     PlusEqual,
@@ -156,6 +166,11 @@ impl LexerToken {
             LexerToken::Else => LexerTokenKind::Else,
             LexerToken::QuestionMark => LexerTokenKind::QuestionMark,
             LexerToken::Colon => LexerTokenKind::Colon,
+            LexerToken::Do => LexerTokenKind::Do,
+            LexerToken::While => LexerTokenKind::While,
+            LexerToken::For => LexerTokenKind::For,
+            LexerToken::Break => LexerTokenKind::Break,
+            LexerToken::Continue => LexerTokenKind::Continue,
 
             // Extra credit
             LexerToken::PlusEqual => LexerTokenKind::PlusEqual,
@@ -217,6 +232,11 @@ impl LexerTokenKind {
             Self::Else => r"^else\b",
             Self::QuestionMark => r"\?",
             Self::Colon => r":",
+            Self::Do => r"^do\b",
+            Self::While => r"^while\b",
+            Self::For => r"^for\b",
+            Self::Break => r"^break\b",
+            Self::Continue => r"^continue\b",
 
             // Extra credit
             Self::PlusEqual => r"\+=",
@@ -276,6 +296,11 @@ impl LexerTokenKind {
             LexerTokenKind::Else => LexerToken::Else,
             LexerTokenKind::QuestionMark => LexerToken::QuestionMark,
             LexerTokenKind::Colon => LexerToken::Colon,
+            LexerTokenKind::Do => LexerToken::Do,
+            LexerTokenKind::While => LexerToken::While,
+            LexerTokenKind::For => LexerToken::For,
+            LexerTokenKind::Break => LexerToken::Break,
+            LexerTokenKind::Continue => LexerToken::Continue,
 
             // Extra credit
             LexerTokenKind::PlusEqual => LexerToken::PlusEqual,
@@ -335,6 +360,11 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::Else,
     LexerTokenKind::QuestionMark,
     LexerTokenKind::Colon,
+    LexerTokenKind::Do,
+    LexerTokenKind::While,
+    LexerTokenKind::For,
+    LexerTokenKind::Break,
+    LexerTokenKind::Continue,
 
     // Extra credit
     LexerTokenKind::PlusEqual,
