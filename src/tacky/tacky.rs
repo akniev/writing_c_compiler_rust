@@ -1,4 +1,4 @@
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
@@ -69,6 +69,57 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
                 instructions.push(TInstruction::Label { label: end_label });
             }
         }
+        ASTStatement::While { condition, body, label } => {
+            let break_label = format!("break_{}", label.clone());
+            let continue_label = format!("continue_{}", label.clone());
+            instructions.push(TInstruction::Label { label: continue_label.clone() });
+            let condition_val = emit_tacky(condition, &mut instructions);
+            instructions.push(TInstruction::JumpIfZero { val: condition_val, label: break_label.clone() });
+            instructions.extend(parse_statement(body.as_ref()));
+            instructions.push(TInstruction::Jump { label: continue_label });
+            instructions.push(TInstruction::Label { label: break_label });
+        }
+        ASTStatement::DoWhile { body, condition, label } => {
+            let start_label = format!("start_{}", label.clone());
+            let break_label = format!("break_{}", label.clone());
+            let continue_label = format!("continue_{}", label.clone());
+            instructions.push(TInstruction::Label { label: start_label.clone() });
+            instructions.extend(parse_statement(body.as_ref()));
+            instructions.push(TInstruction::Label { label: continue_label });
+            let condition_val = emit_tacky(condition, &mut instructions);
+            instructions.push(TInstruction::JumpIfNonZero { val: condition_val, label: start_label.clone() });
+            instructions.push(TInstruction::Label { label: break_label.clone() });
+        }
+        ASTStatement::For { init, condition, post, body, label } => {
+            let start_label = format!("start_{}", label.clone());
+            let break_label = format!("break_{}", label.clone());
+            let continue_label = format!("continue_{}", label.clone());
+
+            instructions.extend(parse_forinit(init));
+            instructions.push(TInstruction::Label { label: start_label.clone() });
+             if let Some(condition) = condition {
+                let condition_val = emit_tacky(condition, &mut instructions);
+                instructions.push(TInstruction::JumpIfZero { val: condition_val, label: break_label.clone() });
+            }
+
+            instructions.extend(parse_statement(body.as_ref()));
+            instructions.push(TInstruction::Label { label: continue_label.clone() });
+
+            if let Some(post) = post {
+                emit_tacky(post, &mut instructions);
+            }
+
+            instructions.push(TInstruction::Jump { label: start_label.clone() });
+            instructions.push(TInstruction::Label { label: break_label });
+        }
+        ASTStatement::Break { label } => {
+            let break_label = format!("break_{}", label.clone());
+            instructions.push(TInstruction::Jump { label: break_label });
+        }
+        ASTStatement::Continue { label } => {
+            let continue_label = format!("continue_{}", label.clone());
+            instructions.push(TInstruction::Jump { label: continue_label });
+        }
         ASTStatement::Compound(block) => {
             let block_instructions = parse_block(block);
             instructions.extend(block_instructions);
@@ -84,9 +135,24 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
         ASTStatement::Null => {
             // Do nothing
         }
-        _ => {
-            panic!("Unsupported statement");
-        }   
+    }
+
+    instructions
+}
+
+fn parse_forinit(init: &ASTForInit) -> Vec<TInstruction> {
+    let mut instructions = Vec::new();
+
+    match init {
+        ASTForInit::InitDecl(declaration) => {
+            instructions.extend(parse_declaration(declaration));
+        }
+        ASTForInit::InitExp(Some(exp)) => {
+            emit_tacky(exp, &mut instructions);
+        }
+        ASTForInit::InitExp(None) => {
+            // Do nothing
+        }
     }
 
     instructions

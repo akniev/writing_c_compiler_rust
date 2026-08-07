@@ -1,5 +1,5 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ForInit};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
 <program> ::= <function>
@@ -203,7 +203,7 @@ impl Parser {
                 let post = self.parse_optional_expression(0, LexerTokenKind::CloseParen);
                 self.expect(LexerTokenKind::CloseParen)?;
                 let body = self.parse_statement()?;
-                Ok(ASTStatement::For { init: for_init, condition: cond, post: post, body: Box::new(body), label: "-".to_string() })
+                Ok(ASTStatement::For { init: for_init, condition: cond, post, body: Box::new(body), label: "-".to_string() })
             }
             LexerToken::OpenBrace => {
                 let block = self.parse_block()?;
@@ -234,15 +234,15 @@ impl Parser {
 
     }
 
-    fn parse_for_init(&mut self) -> ForInit {
+    fn parse_for_init(&mut self) -> ASTForInit {
         let next_token = self.peek();
         if next_token != None && next_token.unwrap().kind().is_type_token() {
             let decl = self.parse_declaration().unwrap();
-            ForInit::InitDecl(decl)
+            ASTForInit::InitDecl(decl)
         } else {
             let exp = self.parse_optional_expression(0, LexerTokenKind::Semicolon);
             _ = self.expect(LexerTokenKind::Semicolon);
-            ForInit::InitExp(exp)
+            ASTForInit::InitExp(exp)
         }
     }
 

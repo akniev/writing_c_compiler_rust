@@ -16,6 +16,7 @@ use crate::lexer::lexer::tokenize;
 use crate::parser::loop_labeling::label_loops;
 use crate::parser::parser::parse;
 use crate::parser::variable_resolution::resolve_variables;
+use crate::tacky::print_tacky::print_tacky;
 use crate::tacky::tacky::parse_tacky;
 
 #[derive(Parser, Debug)]
@@ -92,11 +93,11 @@ fn main() {
         let program_resolved = resolve_variables(program);
         let program_loops_labelled = label_loops(program_resolved);
         println!("AST:");
-        println!("{:?}", program_loops_labelled);
+        println!("{:#?}", program_loops_labelled);
 
         let tacky = parse_tacky(program_loops_labelled).unwrap();
         println!("Tacky:");
-        println!("{:?}", tacky);
+        println!("{}", print_tacky(&tacky));
 
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);

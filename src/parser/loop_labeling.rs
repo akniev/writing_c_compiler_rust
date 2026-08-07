@@ -53,7 +53,7 @@ fn label_loops_for_statement(statement: ASTStatement, label: Option<String>) -> 
             ASTStatement::While { condition, body: Box::new(new_body), label: new_label }
         }
         ASTStatement::DoWhile { condition, body, label: _ } => {
-            let new_label = get_unique_label("do-while");
+            let new_label = get_unique_label("do_while");
             let new_body = label_loops_for_statement(body.as_ref().clone(), Some(new_label.clone()));
             ASTStatement::DoWhile { condition, body: Box::new(new_body), label: new_label }
         }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_label;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator, ForInit};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDefinition, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit};
 use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
@@ -101,13 +101,13 @@ fn resolve_statement(
             let new_condition = resolve_expression(condition.clone(), variable_map);
             ASTStatement::DoWhile { condition: new_condition, body: Box::new(new_body), label }
         }
-        ASTStatement::For { init, condition, post: _, body, label } => {
+        ASTStatement::For { init, condition, post, body, label } => {
             let mut for_init_variable_map = variable_map.clone();
             clear_current_scope_flag(&mut for_init_variable_map);
             let new_init = resolve_forinit(init, &mut for_init_variable_map);
 
             let new_condition = condition.clone().map(|object|resolve_expression(object, &mut for_init_variable_map));
-            let new_post = condition.map(|object|resolve_expression(object, &mut for_init_variable_map));
+            let new_post = post.map(|object|resolve_expression(object, &mut for_init_variable_map));
 
             let mut for_body_variable_map = for_init_variable_map.clone();
             clear_current_scope_flag(&mut for_body_variable_map);
@@ -137,15 +137,15 @@ fn resolve_statement(
     }
 }
 
-fn resolve_forinit(init: ForInit, variable_map: &mut VariableMap) -> ForInit {
+fn resolve_forinit(init: ASTForInit, variable_map: &mut VariableMap) -> ASTForInit {
     match init {
-        ForInit::InitDecl(declaration) => {
+        ASTForInit::InitDecl(declaration) => {
             let new_declaration = resolve_declaration(declaration, variable_map);
-            ForInit::InitDecl(new_declaration)
+            ASTForInit::InitDecl(new_declaration)
         }
-        ForInit::InitExp(expression) => {
+        ASTForInit::InitExp(expression) => {
             let new_expression = expression.map(|object|resolve_expression(object, variable_map));
-            ForInit::InitExp(new_expression)
+            ASTForInit::InitExp(new_expression)
         }
     }
 }

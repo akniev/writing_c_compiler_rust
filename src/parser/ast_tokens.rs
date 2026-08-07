@@ -42,7 +42,7 @@ pub struct ASTFunctionDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ForInit {
+pub enum ASTForInit {
     InitDecl(ASTDeclaration),
     InitExp(Option<ASTExpression>),
 }
@@ -69,7 +69,7 @@ pub enum ASTStatement {
     While { condition: ASTExpression, body: Box<ASTStatement>, label: String },
     DoWhile { body: Box<ASTStatement>, condition: ASTExpression, label: String },
     For {
-        init: ForInit,
+        init: ASTForInit,
         condition: Option<ASTExpression>,
         post: Option<ASTExpression>,
         body: Box<ASTStatement>,
