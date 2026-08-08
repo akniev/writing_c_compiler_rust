@@ -90,6 +90,9 @@ fn main() {
     } else {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
+        println!("AST (pre-labelling):");
+        println!("{:#?}", program);
+        
         let program_resolved = resolve_variables(program);
         let program_loops_labelled = label_loops(program_resolved);
         println!("AST:");
