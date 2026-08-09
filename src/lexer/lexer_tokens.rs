@@ -44,6 +44,7 @@ pub enum LexerToken {
     For,
     Break,
     Continue,
+    Comma,
 
     // Extra credit
     PlusEqual,
@@ -110,6 +111,7 @@ pub enum LexerTokenKind {
     For,
     Break,
     Continue,
+    Comma,
 
     // Extra credit
     PlusEqual,
@@ -177,6 +179,7 @@ impl LexerToken {
             LexerToken::For => LexerTokenKind::For,
             LexerToken::Break => LexerTokenKind::Break,
             LexerToken::Continue => LexerTokenKind::Continue,
+            LexerToken::Comma => LexerTokenKind::Comma,
 
             // Extra credit
             LexerToken::PlusEqual => LexerTokenKind::PlusEqual,
@@ -246,6 +249,7 @@ impl LexerTokenKind {
             Self::For => r"^for\b",
             Self::Break => r"^break\b",
             Self::Continue => r"^continue\b",
+            Self::Comma => r"\,",
 
             // Extra credit
             Self::PlusEqual => r"\+=",
@@ -313,6 +317,7 @@ impl LexerTokenKind {
             LexerTokenKind::For => LexerToken::For,
             LexerTokenKind::Break => LexerToken::Break,
             LexerTokenKind::Continue => LexerToken::Continue,
+            LexerTokenKind::Comma => LexerToken::Comma,
 
             // Extra credit
             LexerTokenKind::PlusEqual => LexerToken::PlusEqual,
@@ -380,6 +385,7 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::For,
     LexerTokenKind::Break,
     LexerTokenKind::Continue,
+    LexerTokenKind::Comma,
 
     // Extra credit
     LexerTokenKind::PlusEqual,
