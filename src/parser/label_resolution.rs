@@ -1,16 +1,19 @@
 use crate::parser::ast_tokens::{ASTBlockItem, ASTFunctionDeclaration, ASTStatement};
 
 pub fn get_labels(function_definition: &ASTFunctionDeclaration) -> Vec<String> {
-    panic!("Not implemented");
-    // let mut labels = Vec::new();
-    //
-    // for block_item in &function_definition.body.items {
-    //     labels.extend(extract_labels_from_block_item(block_item));
-    // }
-    //
-    // check_duplicates(&labels);
-    //
-    // labels
+    let mut labels = Vec::new();
+    
+    let Some(function_body) = function_definition.body.as_ref() else {
+        return labels;
+    };
+    
+    for block_item in &function_body.items {
+        labels.extend(extract_labels_from_block_item(block_item));
+    }
+    
+    check_duplicates(&labels);
+    
+    labels
 }
 
 fn check_duplicates(labels: &[String]) {

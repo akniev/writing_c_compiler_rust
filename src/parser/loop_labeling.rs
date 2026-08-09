@@ -16,20 +16,23 @@ struct LabelContext {
 }
 
 pub fn label_program(program: ASTProgram) -> ASTProgram {
-    panic!("Not implemented");
-    // let mut label_context = LabelContext {
-    //     loop_label: None,
-    //     switch_label: None,
-    //     current_context: CurrentContext::None,
-    // };
-    // let new_function_definition = label_function(program.function_definition, &mut label_context);
-    // ASTProgram { function_definition: new_function_definition }
+    let mut label_context = LabelContext {
+        loop_label: None,
+        switch_label: None,
+        current_context: CurrentContext::None,
+    };
+
+    let new_functions: Vec<ASTFunctionDeclaration> = program
+        .functions
+        .into_iter()
+        .map(|function| label_function(function, &mut label_context))
+        .collect();
+    ASTProgram { functions: new_functions }
 }
 
 fn label_function(function: ASTFunctionDeclaration, label_context: &mut LabelContext) -> ASTFunctionDeclaration {
-    panic!("Not implemented");
-    // let new_body = label_block(function.body, label_context);
-    // ASTFunctionDeclaration { name: function.name, body: new_body }
+    let new_body = function.body.map(|b|label_block(b, label_context));
+    ASTFunctionDeclaration { name: function.name, params: function.params, body: new_body }
 }
 
 fn label_block(block: ASTBlock, label_context: &mut LabelContext) -> ASTBlock {

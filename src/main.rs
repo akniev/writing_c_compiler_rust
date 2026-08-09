@@ -16,7 +16,8 @@ use crate::lexer::lexer::tokenize;
 use crate::parser::loop_labeling::label_program;
 use crate::parser::parse_switches::parse_switches;
 use crate::parser::parser::parse;
-use crate::parser::variable_resolution::resolve_variables;
+use crate::parser::identifier_resolution::resolve_identifiers;
+use crate::parser::typechecker::typecheck;
 use crate::tacky::print_tacky::print_tacky;
 use crate::tacky::tacky::parse_tacky;
 
@@ -68,22 +69,25 @@ fn main() {
     } else if args.validate {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
-        let program_resolved = resolve_variables(program);
+        let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
         println!("{:?}", program_loops_labelled);
+        typecheck(program_loops_labelled.clone());
     } else if args.tacky {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
-        let program_resolved = resolve_variables(program);
+        let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
+        typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
         let tacky = parse_tacky(program_loops_labelled, switch_map).unwrap();
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
-        let program_resolved = resolve_variables(program);
+        let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
+        typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
         let tacky = parse_tacky(program_loops_labelled, switch_map).unwrap();
         let assembly = generate_assembly(tacky);
@@ -96,8 +100,9 @@ fn main() {
         println!("AST (pre-labelling):");
         println!("{:#?}", program);
 
-        let program_resolved = resolve_variables(program);
+        let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
+        typecheck(program_loops_labelled.clone());
         println!("AST:");
         println!("{:#?}", program_loops_labelled);
 

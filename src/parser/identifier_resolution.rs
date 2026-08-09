@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_label;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration};
 use crate::parser::label_resolution::get_labels;
 
-pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
-    let mut resolve_context = ResolveContext { variable_map: HashMap::new(), labels: vec![] };
+pub fn resolve_identifiers(program: ASTProgram) -> ASTProgram {
+    let mut resolve_context = ResolveContext { identifier_map: HashMap::new(), labels: vec![] };
     let mut new_functions: Vec<ASTFunctionDeclaration> = Vec::new();
     for function_declaration in program.functions {
         new_functions.push(resolve_function_declaration(function_declaration, &mut resolve_context));
@@ -13,30 +13,14 @@ pub fn resolve_variables(program: ASTProgram) -> ASTProgram {
     ASTProgram { functions: new_functions }
 }
 
-fn resolve_function_declaration(
-    function_definition: ASTFunctionDeclaration,
-    resolve_context: &mut ResolveContext,
-) -> ASTFunctionDeclaration {
-    let labels = get_labels(&function_definition);
-    resolve_context.labels = labels.clone();
-    let new_body = function_definition.body.map(|b|resolve_block(b, resolve_context));
-    ASTFunctionDeclaration {
-        name: function_definition.name,
-        params: function_definition.params,
-        body: new_body
-    }
-}
-
 fn resolve_block(
     block: ASTBlock,
     resolve_context: &mut ResolveContext,
 ) -> ASTBlock {
-    let mut new_resolve_context = resolve_context.clone_for_new_scope();
-
     let mut new_items = vec![];
 
     for block_item in block.items {
-        new_items.push(resolve_block_item(block_item, &mut new_resolve_context))
+        new_items.push(resolve_block_item(block_item, resolve_context))
     }
 
     ASTBlock { items: new_items }
@@ -67,6 +51,7 @@ fn resolve_block_item(
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct VariableMapEntry {
     name: String,
+    has_external_linkage: bool,
     from_current_scope: bool,
 }
 
@@ -74,15 +59,15 @@ type VariableMap = HashMap<String, VariableMapEntry>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ResolveContext {
-    variable_map: VariableMap,
+    identifier_map: VariableMap,
     labels: Vec<String>,
 }
 
 impl ResolveContext {
     fn clone_for_new_scope(&self) -> ResolveContext {
-        let mut new_variable_map = self.variable_map.clone();
+        let mut new_variable_map = self.identifier_map.clone();
         clear_current_scope_flag(&mut new_variable_map);
-        ResolveContext { variable_map: new_variable_map, labels: self.labels.clone() }
+        ResolveContext { identifier_map: new_variable_map, labels: self.labels.clone() }
     }
 }
 
@@ -152,7 +137,8 @@ fn resolve_statement(
             ASTStatement::Continue { label }
         }
         ASTStatement::Compound(block) => {
-            let new_block = resolve_block(block, resolve_context);
+            let mut new_resolve_context = resolve_context.clone_for_new_scope();
+            let new_block = resolve_block(block, &mut new_resolve_context);
             ASTStatement::Compound(new_block)
         }
         ASTStatement::Goto { label } => {
@@ -169,17 +155,16 @@ fn resolve_statement(
 }
 
 fn resolve_forinit(init: ASTForInit, resolve_context: &mut ResolveContext) -> ASTForInit {
-    panic!("Not implemented");
-    // match init {
-    //     ASTForInit::InitDecl(declaration) => {
-    //         let new_declaration = resolve_declaration(declaration, resolve_context);
-    //         ASTForInit::InitDecl(new_declaration)
-    //     }
-    //     ASTForInit::InitExp(expression) => {
-    //         let new_expression = expression.map(|object|resolve_expression(object, resolve_context));
-    //         ASTForInit::InitExp(new_expression)
-    //     }
-    // }
+    match init {
+        ASTForInit::InitDecl(declaration) => {
+            let new_declaration = resolve_variable_declaration(declaration, resolve_context);
+            ASTForInit::InitDecl(new_declaration)
+        }
+        ASTForInit::InitExp(expression) => {
+            let new_expression = expression.map(|object|resolve_expression(object, resolve_context));
+            ASTForInit::InitExp(new_expression)
+        }
+    }
 }
 
 fn resolve_declaration(
@@ -188,19 +173,69 @@ fn resolve_declaration(
 ) -> ASTDeclaration {
     match declaration {
         ASTDeclaration::VariableDeclaration(variable_declaration) => {
-            // if resolve_context.variable_map.contains_key(&name) && resolve_context.variable_map.get(&name).unwrap().from_current_scope {
-            //     panic!("Variable {} is already defined", name);
-            // }
-            // let unique_name = get_unique_label(&name);
-            // resolve_context.variable_map.insert(name, VariableMapEntry { name: unique_name.clone(), from_current_scope: true });
-            // let new_init = init.map(|init| resolve_expression(init, resolve_context));
-            // ASTDeclaration::VariableDeclaration { name: unique_name, init: new_init }
-            panic!("Not implemented");
+            let variable_declaration = resolve_variable_declaration(variable_declaration, resolve_context);
+            ASTDeclaration::VariableDeclaration(variable_declaration)
         }
         ASTDeclaration::FunctionDeclaration(function_declaration) => {
-            panic!("Not implemented");
+            let ASTFunctionDeclaration { name, params: _, body } = function_declaration.clone();
+            if body != None {
+                panic!("Nested function definitions are not allowed");
+            }
+            resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
+            let function_declaration = resolve_function_declaration(function_declaration, resolve_context);
+            ASTDeclaration::FunctionDeclaration(function_declaration)
         }
     }
+}
+
+fn resolve_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
+    let ASTVariableDeclaration { name, init } = variable_declaration;
+    if resolve_context.identifier_map.contains_key(&name) && resolve_context.identifier_map.get(&name).unwrap().from_current_scope {
+        panic!("Variable {} is already defined", name);
+    }
+    let unique_name = get_unique_label(&name);
+    resolve_context.identifier_map.insert(name, VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
+    let new_init = init.map(|init| resolve_expression(init, resolve_context));
+    ASTVariableDeclaration { name: unique_name, init: new_init }
+}
+
+fn resolve_function_declaration(
+    function_declaration: ASTFunctionDeclaration,
+    resolve_context: &mut ResolveContext,
+) -> ASTFunctionDeclaration {
+    let ASTFunctionDeclaration { name, params: _, body: _ } = function_declaration.clone();
+    if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
+        panic!("Duplicate declaration with different linkage for function {}", name);
+    }
+    resolve_context.identifier_map.insert(
+        name.clone(),
+        VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true }
+    );
+
+    let mut function_context = resolve_context.clone_for_new_scope();
+    let labels = get_labels(&function_declaration);
+    function_context.labels = labels.clone();
+
+    let mut new_params = vec![];
+    for param in function_declaration.params.clone() {
+        let new_param = resolve_param(param, &mut function_context);
+        new_params.push(new_param);
+    }
+    let new_body = function_declaration.body.map(|b|resolve_block(b, &mut function_context));
+    ASTFunctionDeclaration {
+        name: function_declaration.name,
+        params: new_params,
+        body: new_body
+    }
+}
+
+fn resolve_param(param: String, resolve_context: &mut ResolveContext) -> String {
+    if resolve_context.identifier_map.contains_key(&param) && resolve_context.identifier_map.get(&param).unwrap().from_current_scope {
+        panic!("Parameter {} is already defined", param);
+    }
+    let unique_name = get_unique_label(&param);
+    resolve_context.identifier_map.insert(param, VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
+    unique_name
 }
 
 fn resolve_expression(
@@ -209,7 +244,7 @@ fn resolve_expression(
 ) -> ASTExpression {
     match exp {
         ASTExpression::Var(name) => {
-            let unique_name = resolve_context.variable_map.get(&name).unwrap().name.clone();
+            let unique_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
             ASTExpression::Var(unique_name.clone())
         }
         ASTExpression::Constant(int) => {
@@ -257,7 +292,17 @@ fn resolve_expression(
             ASTExpression::Conditional { condition: Box::new(new_condition), if_true: Box::new(new_if_true), if_false: Box::new(new_if_false) }
         }
         ASTExpression::FunctionCall { name, args } => {
-            panic!("Not implemented");
+            if resolve_context.identifier_map.contains_key(&name) {
+                let new_fun_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
+                let mut new_args = vec![];
+                for arg in args.clone() {
+                    let new_arg = resolve_expression(arg, resolve_context);
+                    new_args.push(new_arg);
+                }
+                ASTExpression::FunctionCall { name: new_fun_name, args: new_args }
+            } else {
+                panic!("Function {} is not defined", name);
+            }
         }
     }
 }
