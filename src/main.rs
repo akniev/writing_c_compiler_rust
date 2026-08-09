@@ -24,7 +24,7 @@ use crate::tacky::tacky::parse_tacky;
 #[command(about = "C compiler arguments parser")]
 #[command(group(
 ArgGroup::new("stage")
-    .args(&["lex", "parse", "validate", "codegen", "tacky", "compile"])
+    .args(&["lex", "parse", "validate", "codegen", "tacky", "c", "run"])
     .multiple(false)
 ))]
 struct Args {
@@ -44,9 +44,9 @@ struct Args {
     tacky: bool,
 
     #[arg(long)]
-    compile: bool,
+    run: bool,
 
-    #[arg(long)]
+    #[arg(short = 'c', long = "compile")]
     c: bool,
 
     input: String,
@@ -145,7 +145,7 @@ fn main() {
         }
 
         // Run the compiled program and print the exit code
-        if args.compile {
+        if args.run && !args.c {
             let output = Command::new(&out_file)
                 .output()
                 .expect("Failed to execute compiled program");
