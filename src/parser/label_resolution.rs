@@ -61,6 +61,21 @@ fn extract_labels_from_statement(statement: &ASTStatement) -> Vec<String> {
             labels.extend(extract_labels_from_statement(body.as_ref()));
             labels
         }
+        ASTStatement::Switch { condition: _, body, label: _ } => {
+            let mut labels = Vec::new();
+            labels.extend(extract_labels_from_statement(body.as_ref()));
+            labels
+        }
+        ASTStatement::Case { value: _, body, label: _ } => {
+            let mut labels = Vec::new();
+            labels.extend(extract_labels_from_statement(body.as_ref()));
+            labels
+        }
+        ASTStatement::Default { body, label: _ } => {
+            let mut labels = Vec::new();
+            labels.extend(extract_labels_from_statement(body.as_ref()));
+            labels
+        }
         ASTStatement::Break { label: _ } => {
             vec![]
         }

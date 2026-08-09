@@ -57,6 +57,9 @@ pub enum LexerToken {
     LeftShiftEqual,
     RightShiftEqual,
     Goto,
+    Switch,
+    Case,
+    Default,
 
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
@@ -120,6 +123,9 @@ pub enum LexerTokenKind {
     LeftShiftEqual,
     RightShiftEqual,
     Goto,
+    Switch,
+    Case,
+    Default,
 
     // We need them to be able to remove them from code because we don't need them yet
     Comment,
@@ -184,6 +190,9 @@ impl LexerToken {
             LexerToken::LeftShiftEqual => LexerTokenKind::LeftShiftEqual,
             LexerToken::RightShiftEqual => LexerTokenKind::RightShiftEqual,
             LexerToken::Goto => LexerTokenKind::Goto,
+            LexerToken::Switch => LexerTokenKind::Switch,
+            LexerToken::Case => LexerTokenKind::Case,
+            LexerToken::Default => LexerTokenKind::Default,
 
             // We need them to be able to remove them from code because we don't need them yet
             LexerToken::Comment => LexerTokenKind::Comment,
@@ -250,6 +259,9 @@ impl LexerTokenKind {
             Self::LeftShiftEqual => r"<<=",
             Self::RightShiftEqual => r">>=",
             Self::Goto => r"^goto\b",
+            Self::Switch => r"^switch\b",
+            Self::Case => r"^case\b",
+            Self::Default => r"^default\b",
 
             // We need them to be able to remove them from code because we don't need them yet
             Self::Comment => r"^(?://[^\r\n]*|/\*[\s\S]*?\*/)",
@@ -314,6 +326,9 @@ impl LexerTokenKind {
             LexerTokenKind::LeftShiftEqual => LexerToken::LeftShiftEqual,
             LexerTokenKind::RightShiftEqual => LexerToken::RightShiftEqual,
             LexerTokenKind::Goto => LexerToken::Goto,
+            LexerTokenKind::Switch => LexerToken::Switch,
+            LexerTokenKind::Case => LexerToken::Case,
+            LexerTokenKind::Default => LexerToken::Default,
 
             // We need them to be able to remove them from code because we don't need them yet
             LexerTokenKind::Comment => LexerToken::Comment,
@@ -378,6 +393,9 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::LeftShiftEqual,
     LexerTokenKind::RightShiftEqual,
     LexerTokenKind::Goto,
+    LexerTokenKind::Switch,
+    LexerTokenKind::Case,
+    LexerTokenKind::Default,
 
     // We need them to be able to remove them from code because we don't need them yet
     LexerTokenKind::Comment,

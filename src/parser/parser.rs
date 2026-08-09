@@ -19,6 +19,9 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
               | "while" "(" <exp> ")" <statement>
               | "do" <statement> "while" "(" <exp> ")" ";"
               | for "(" <for-init> [ <exp> ] ";" [ <exp> ] ")" <statement>
+              | "switch" "(" <exp> ")" <statement>
+              | "case" <exp> ":" <statement>
+              | "default" ":" <statement>
               | "goto" <identifier> ";"
 <exp> ::= <factor> | <exp> <binop> <exp> | <exp> "?" <exp> ":" <exp>
 <factor> ::= <int> | <identifier> | <unop> <factor> | "(" <exp> ")" | <factor> <postfix>
@@ -204,6 +207,27 @@ impl Parser {
                 self.expect(LexerTokenKind::CloseParen)?;
                 let body = self.parse_statement()?;
                 Ok(ASTStatement::For { init: for_init, condition: cond, post, body: Box::new(body), label: "-".to_string() })
+            }
+            LexerToken::Switch => {
+                self.take();
+                self.expect(LexerTokenKind::OpenParen)?;
+                let exp = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::CloseParen)?;
+                let body = self.parse_statement()?;
+                Ok(ASTStatement::Switch { condition: exp, body: Box::new(body), label: "-".to_string() })
+            }
+            LexerToken::Case => {
+                self.take();
+                let exp = self.parse_expression(0)?;
+                self.expect(LexerTokenKind::Colon)?;
+                let body = self.parse_statement()?;
+                Ok(ASTStatement::Case { value: exp, body: Box::new(body), label: "-".to_string() })
+            }
+            LexerToken::Default => {
+                self.take();
+                self.expect(LexerTokenKind::Colon)?;
+                let body = self.parse_statement()?;
+                Ok(ASTStatement::Default { body: Box::new(body), label: "-".to_string() })
             }
             LexerToken::OpenBrace => {
                 let block = self.parse_block()?;

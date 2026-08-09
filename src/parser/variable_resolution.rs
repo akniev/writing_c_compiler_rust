@@ -123,6 +123,20 @@ fn resolve_statement(
             let new_body = resolve_statement(body.as_ref().clone(), &mut for_body_resolve_context);
             ASTStatement::For { init: new_init, condition: new_condition, post: new_post, body: Box::new(new_body), label }
         }
+        ASTStatement::Switch { condition, body, label } => {
+            let new_condition = resolve_expression(condition.clone(), resolve_context);
+            let new_body = resolve_statement(body.as_ref().clone(), resolve_context);
+            ASTStatement::Switch { condition: new_condition, body: Box::new(new_body), label }
+        }
+        ASTStatement::Case { value, body, label } => {
+            let new_value = resolve_expression(value.clone(), resolve_context);
+            let new_body = resolve_statement(body.as_ref().clone(), resolve_context);
+            ASTStatement::Case { value: new_value, body: Box::new(new_body), label }
+        }
+        ASTStatement::Default { body, label } => {
+            let new_body = resolve_statement(body.as_ref().clone(), resolve_context);
+            ASTStatement::Default { body: Box::new(new_body), label }
+        }
         ASTStatement::Break { label } => {
             ASTStatement::Break { label }
         }

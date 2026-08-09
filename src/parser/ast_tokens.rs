@@ -15,6 +15,9 @@ statement = Return(exp)
           | While(exp condition, statement body, identifier label)
           | DoWhile(statement body, exp condition, identifier label)
           | For(for_init init, exp? condition, exp? post, statement body, identifier label)
+          | Switch(exp condition, statement body, identifier label)
+          | Case(exp value, statement body, identifier label)
+          | Default(statement body, identifier label)
           | LabelledStatement(identifier label, statement)
           | Goto(identifier label)
           | Null
@@ -75,6 +78,9 @@ pub enum ASTStatement {
         body: Box<ASTStatement>,
         label: String
     },
+    Switch { condition: ASTExpression, body: Box<ASTStatement>, label: String },
+    Case { value: ASTExpression, body: Box<ASTStatement>, label: String },
+    Default { body: Box<ASTStatement>, label: String },
     LabelledStatement { label: String, statement: Box<ASTStatement> },
     Goto { label: String },
     Null,

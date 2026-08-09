@@ -13,7 +13,8 @@ use crate::assembly::code_emission::generate_code;
 use crate::assembly::fix_mov::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
 use crate::lexer::lexer::tokenize;
-use crate::parser::loop_labeling::label_loops;
+use crate::parser::loop_labeling::label_program;
+use crate::parser::parse_switches::parse_switches;
 use crate::parser::parser::parse;
 use crate::parser::variable_resolution::resolve_variables;
 use crate::tacky::print_tacky::print_tacky;
@@ -68,21 +69,23 @@ fn main() {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
-        let program_loops_labelled = label_loops(program_resolved);
+        let program_loops_labelled = label_program(program_resolved);
         println!("{:?}", program_loops_labelled);
     } else if args.tacky {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
-        let program_loops_labelled = label_loops(program_resolved);
-        let tacky = parse_tacky(program_loops_labelled).unwrap();
+        let program_loops_labelled = label_program(program_resolved);
+        let switch_map = parse_switches(program_loops_labelled.clone());
+        let tacky = parse_tacky(program_loops_labelled, switch_map).unwrap();
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens).unwrap();
         let program_resolved = resolve_variables(program);
-        let program_loops_labelled = label_loops(program_resolved);
-        let tacky = parse_tacky(program_loops_labelled).unwrap();
+        let program_loops_labelled = label_program(program_resolved);
+        let switch_map = parse_switches(program_loops_labelled.clone());
+        let tacky = parse_tacky(program_loops_labelled, switch_map).unwrap();
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
@@ -92,13 +95,17 @@ fn main() {
         let program = parse(tokens).unwrap();
         println!("AST (pre-labelling):");
         println!("{:#?}", program);
-        
+
         let program_resolved = resolve_variables(program);
-        let program_loops_labelled = label_loops(program_resolved);
+        let program_loops_labelled = label_program(program_resolved);
         println!("AST:");
         println!("{:#?}", program_loops_labelled);
 
-        let tacky = parse_tacky(program_loops_labelled).unwrap();
+        let switch_map = parse_switches(program_loops_labelled.clone());
+        println!("Switch map:");
+        println!("{:#?}", switch_map);
+
+        let tacky = parse_tacky(program_loops_labelled, switch_map).unwrap();
         println!("Tacky:");
         println!("{}", print_tacky(&tacky));
 

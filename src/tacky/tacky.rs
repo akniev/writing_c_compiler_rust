@@ -1,34 +1,36 @@
+use std::collections::HashMap;
 use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDefinition, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
+use crate::parser::parse_switches::SwitchMetadata;
 
-pub fn parse_tacky(program: ASTProgram) -> Result<TProgram, String> {
-    let t_function = parse_function(program.function_definition)?;
+pub fn parse_tacky(program: ASTProgram, switch_map: HashMap<String, SwitchMetadata>) -> Result<TProgram, String> {
+    let t_function = parse_function(program.function_definition, switch_map)?;
     let t_program = TProgram { function_definition: t_function };
     Ok(t_program)
 }
 
-fn parse_function(function: ASTFunctionDefinition) -> Result<TFunctionDefinition, String> {
-    let mut function_instructions = parse_block(&function.body);
+fn parse_function(function: ASTFunctionDefinition, switch_map: HashMap<String, SwitchMetadata>) -> Result<TFunctionDefinition, String> {
+    let mut function_instructions = parse_block(&function.body, switch_map);
     function_instructions.push(TInstruction::Return(TValue::Constant(0)));
     let t_function = TFunctionDefinition { name: function.name, body: function_instructions };
     Ok(t_function)
 }
 
-fn parse_block(block: &ASTBlock) -> Vec<TInstruction> {
+fn parse_block(block: &ASTBlock, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
     let function_body: Vec<TInstruction> = block
         .items
         .iter()
-        .flat_map(|block_item| parse_block_item(block_item))
+        .flat_map(|block_item| parse_block_item(block_item, switch_map.clone()))
         .collect();
     function_body
 }
 
-fn parse_block_item(block_item: &ASTBlockItem) -> Vec<TInstruction> {
+fn parse_block_item(block_item: &ASTBlockItem, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
     match block_item {
         ASTBlockItem::Statement(statement) => {
-            parse_statement(&statement)
+            parse_statement(&statement, switch_map)
         }
         ASTBlockItem::Declaration(declaration) => {
             parse_declaration(&declaration)
@@ -36,7 +38,7 @@ fn parse_block_item(block_item: &ASTBlockItem) -> Vec<TInstruction> {
     }
 }
 
-fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
+fn parse_statement(statement: &ASTStatement, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
     let mut instructions = Vec::new();
 
     match statement {
@@ -53,18 +55,18 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
                 let else_label = make_label("else_label");
                 let end_label = make_label("end_label");
                 instructions.push(TInstruction::JumpIfZero { val: condition_val, label: else_label.clone() });
-                let then_instructions = parse_statement(then_statement.as_ref());
+                let then_instructions = parse_statement(then_statement.as_ref(), switch_map.clone());
                 instructions.extend(then_instructions);
                 instructions.push(TInstruction::Jump { label: end_label.clone() });
                 instructions.push(TInstruction::Label { label: else_label });
-                let else_instructions = parse_statement(else_statement.as_ref());
+                let else_instructions = parse_statement(else_statement.as_ref(), switch_map);
                 instructions.extend(else_instructions);
                 instructions.push(TInstruction::Label { label: end_label });
             } else {
                 let condition_val = emit_tacky(condition, &mut instructions);
                 let end_label = make_label("end_label");
                 instructions.push(TInstruction::JumpIfZero { val: condition_val, label: end_label.clone() });
-                let then_instructions = parse_statement(then_statement.as_ref());
+                let then_instructions = parse_statement(then_statement.as_ref(), switch_map);
                 instructions.extend(then_instructions);
                 instructions.push(TInstruction::Label { label: end_label });
             }
@@ -75,7 +77,7 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
             instructions.push(TInstruction::Label { label: continue_label.clone() });
             let condition_val = emit_tacky(condition, &mut instructions);
             instructions.push(TInstruction::JumpIfZero { val: condition_val, label: break_label.clone() });
-            instructions.extend(parse_statement(body.as_ref()));
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
             instructions.push(TInstruction::Jump { label: continue_label });
             instructions.push(TInstruction::Label { label: break_label });
         }
@@ -84,7 +86,7 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
             let break_label = format!("break_{}", label.clone());
             let continue_label = format!("continue_{}", label.clone());
             instructions.push(TInstruction::Label { label: start_label.clone() });
-            instructions.extend(parse_statement(body.as_ref()));
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
             instructions.push(TInstruction::Label { label: continue_label });
             let condition_val = emit_tacky(condition, &mut instructions);
             instructions.push(TInstruction::JumpIfNonZero { val: condition_val, label: start_label.clone() });
@@ -102,7 +104,7 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
                 instructions.push(TInstruction::JumpIfZero { val: condition_val, label: break_label.clone() });
             }
 
-            instructions.extend(parse_statement(body.as_ref()));
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
             instructions.push(TInstruction::Label { label: continue_label.clone() });
 
             if let Some(post) = post {
@@ -111,6 +113,36 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
 
             instructions.push(TInstruction::Jump { label: start_label.clone() });
             instructions.push(TInstruction::Label { label: break_label });
+        }
+        ASTStatement::Switch { condition, body, label } => {
+            let condition_val = emit_tacky(condition, &mut instructions);
+            let tmp_var = TValue::Var(make_temporary());
+            for (case_val, case_label) in &switch_map.get(label).unwrap().cases {
+                instructions.push(TInstruction::Binary {
+                    op: TBinaryOperator::Equal,
+                    src1: condition_val.clone(),
+                    src2: TValue::Constant(*case_val),
+                    dst: tmp_var.clone()
+                });
+                instructions.push(TInstruction::JumpIfNonZero {
+                    val: tmp_var.clone(),
+                    label: case_label.clone()
+                })
+            }
+            if let Some(default) = &switch_map.get(label).unwrap().default {
+                instructions.push(TInstruction::Jump { label: default.clone() });
+            }
+            instructions.push(TInstruction::Jump { label: format!("break_{}", label.clone()) });
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
+            instructions.push(TInstruction::Label { label: format!("break_{}", label.clone()) });
+        }
+        ASTStatement::Case { value: _, body, label } => {
+            instructions.push(TInstruction::Label { label: label.clone() });
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
+        }
+        ASTStatement::Default { body, label } => {
+            instructions.push(TInstruction::Label { label: label.clone() });
+            instructions.extend(parse_statement(body.as_ref(), switch_map));
         }
         ASTStatement::Break { label } => {
             let break_label = format!("break_{}", label.clone());
@@ -121,7 +153,7 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
             instructions.push(TInstruction::Jump { label: continue_label });
         }
         ASTStatement::Compound(block) => {
-            let block_instructions = parse_block(block);
+            let block_instructions = parse_block(block, switch_map);
             instructions.extend(block_instructions);
         }
         ASTStatement::Goto { label } => {
@@ -129,7 +161,7 @@ fn parse_statement(statement: &ASTStatement) -> Vec<TInstruction> {
         }
         ASTStatement::LabelledStatement { label, statement } => {
             instructions.push(TInstruction::Label { label: label.clone() });
-            let statement_instructions = parse_statement(statement.as_ref());
+            let statement_instructions = parse_statement(statement.as_ref(), switch_map);
             instructions.extend(statement_instructions);
         }
         ASTStatement::Null => {
