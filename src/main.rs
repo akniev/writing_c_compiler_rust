@@ -63,17 +63,17 @@ fn main() {
         println!("{:?}", tokens);
     } else if args.parse {
         let tokens = tokenize(input_str);
-        let program = parse(tokens).unwrap();
+        let program = parse(tokens);
         println!("{:?}", program);
     } else if args.validate {
         let tokens = tokenize(input_str);
-        let program = parse(tokens).unwrap();
+        let program = parse(tokens);
         let program_resolved = resolve_variables(program);
         let program_loops_labelled = label_program(program_resolved);
         println!("{:?}", program_loops_labelled);
     } else if args.tacky {
         let tokens = tokenize(input_str);
-        let program = parse(tokens).unwrap();
+        let program = parse(tokens);
         let program_resolved = resolve_variables(program);
         let program_loops_labelled = label_program(program_resolved);
         let switch_map = parse_switches(program_loops_labelled.clone());
@@ -81,7 +81,7 @@ fn main() {
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
-        let program = parse(tokens).unwrap();
+        let program = parse(tokens);
         let program_resolved = resolve_variables(program);
         let program_loops_labelled = label_program(program_resolved);
         let switch_map = parse_switches(program_loops_labelled.clone());
@@ -92,7 +92,7 @@ fn main() {
         println!("{:?}", assembly_mov_fixed);
     } else {
         let tokens = tokenize(input_str);
-        let program = parse(tokens).unwrap();
+        let program = parse(tokens);
         println!("AST (pre-labelling):");
         println!("{:#?}", program);
 

@@ -1,11 +1,12 @@
 
 /*
-program = Program(function_definition)
-function_definition = Function(identifier name, block body)
+program = Program(function_declaration*)
 block_item = S(statement) | D(declaration)
 block = Block(block_item*)
-declaration = Declaration(identifier name, exp? init)
-for_init = InitDecl(declaration) | InitExp(exp?)
+declaration = FunDecl(function_declaration) | VarDecl(variable_declaration)
+variable_declaration = (identifier name, exp? init)
+function_declaration = (identifier name, identifier* params, block? body)
+for_init = InitDecl(variable_declaration) | InitExp(exp?)
 statement = Return(exp)
           | Expression(exp)
           | If(exp condition, statement then, statement? else)
@@ -29,24 +30,32 @@ exp = Constant(int)
     | CompoundAssignment(exp, exp, binary_operator)
     | Postfix(postfix_operator, exp)
     | Conditional(exp condition, exp, exp)
+    | FunctionCall(identifier, exp* args)
 unary_operator = Complement | Negate | Not
 binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | And | Or | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
  */
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ASTProgram {
-    pub function_definition: ASTFunctionDefinition,
+    pub functions: Vec<ASTFunctionDeclaration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ASTFunctionDefinition {
+pub struct ASTFunctionDeclaration {
     pub name: String,
-    pub body: ASTBlock,
+    pub params: Vec<String>,
+    pub body: Option<ASTBlock>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ASTVariableDeclaration {
+    pub name: String,
+    pub init: Option<ASTExpression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASTForInit {
-    InitDecl(ASTDeclaration),
+    InitDecl(ASTVariableDeclaration),
     InitExp(Option<ASTExpression>),
 }
 
@@ -88,7 +97,8 @@ pub enum ASTStatement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASTDeclaration {
-    VariableDeclaration { name: String, init: Option<ASTExpression> }
+    VariableDeclaration(ASTVariableDeclaration),
+    FunctionDeclaration(ASTFunctionDeclaration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -100,7 +110,8 @@ pub enum ASTExpression {
     Binary { op: ASTBinaryOperator, lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
     Assignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
     CompoundAssignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression>, operator: ASTBinaryOperator },
-    Conditional { condition: Box<ASTExpression>, if_true: Box<ASTExpression>, if_false: Box<ASTExpression> }
+    Conditional { condition: Box<ASTExpression>, if_true: Box<ASTExpression>, if_false: Box<ASTExpression> },
+    FunctionCall { name: String, args: Vec<ASTExpression> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

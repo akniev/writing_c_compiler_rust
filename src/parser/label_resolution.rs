@@ -1,15 +1,16 @@
-use crate::parser::ast_tokens::{ASTBlockItem, ASTFunctionDefinition, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlockItem, ASTFunctionDeclaration, ASTStatement};
 
-pub fn get_labels(function_definition: &ASTFunctionDefinition) -> Vec<String> {
-    let mut labels = Vec::new();
-
-    for block_item in &function_definition.body.items {
-        labels.extend(extract_labels_from_block_item(block_item));
-    }
-
-    check_duplicates(&labels);
-
-    labels
+pub fn get_labels(function_definition: &ASTFunctionDeclaration) -> Vec<String> {
+    panic!("Not implemented");
+    // let mut labels = Vec::new();
+    //
+    // for block_item in &function_definition.body.items {
+    //     labels.extend(extract_labels_from_block_item(block_item));
+    // }
+    //
+    // check_duplicates(&labels);
+    //
+    // labels
 }
 
 fn check_duplicates(labels: &[String]) {

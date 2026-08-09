@@ -1,5 +1,5 @@
 use crate::common::global_counter::get_unique_label;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTFunctionDefinition, ASTProgram, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTFunctionDeclaration, ASTProgram, ASTStatement};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum CurrentContext {
@@ -16,18 +16,20 @@ struct LabelContext {
 }
 
 pub fn label_program(program: ASTProgram) -> ASTProgram {
-    let mut label_context = LabelContext {
-        loop_label: None,
-        switch_label: None,
-        current_context: CurrentContext::None,
-    };
-    let new_function_definition = label_function(program.function_definition, &mut label_context);
-    ASTProgram { function_definition: new_function_definition }
+    panic!("Not implemented");
+    // let mut label_context = LabelContext {
+    //     loop_label: None,
+    //     switch_label: None,
+    //     current_context: CurrentContext::None,
+    // };
+    // let new_function_definition = label_function(program.function_definition, &mut label_context);
+    // ASTProgram { function_definition: new_function_definition }
 }
 
-fn label_function(function: ASTFunctionDefinition, label_context: &mut LabelContext) -> ASTFunctionDefinition {
-    let new_body = label_block(function.body, label_context);
-    ASTFunctionDefinition { name: function.name, body: new_body }
+fn label_function(function: ASTFunctionDeclaration, label_context: &mut LabelContext) -> ASTFunctionDeclaration {
+    panic!("Not implemented");
+    // let new_body = label_block(function.body, label_context);
+    // ASTFunctionDeclaration { name: function.name, body: new_body }
 }
 
 fn label_block(block: ASTBlock, label_context: &mut LabelContext) -> ASTBlock {
