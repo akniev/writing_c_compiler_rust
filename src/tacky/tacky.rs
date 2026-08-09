@@ -1,23 +1,34 @@
 use std::collections::HashMap;
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTVariableDeclaration};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
 use crate::parser::parse_switches::SwitchMetadata;
 
-pub fn parse_tacky(program: ASTProgram, switch_map: HashMap<String, SwitchMetadata>) -> Result<TProgram, String> {
-    panic!("Not implemented");
-    // let t_function = parse_function(program.function_definition, switch_map)?;
-    // let t_program = TProgram { function_definition: t_function };
-    // Ok(t_program)
+pub fn parse_tacky(program: ASTProgram, switch_map: HashMap<String, SwitchMetadata>) -> TProgram {
+    let mut t_functions = vec![];
+    for function in program.functions {
+        if function.body.is_some() {
+            let t_function = parse_function(function, switch_map.clone());
+            t_functions.push(t_function);
+        }
+    }
+    let t_program = TProgram { functions: t_functions };
+    t_program
 }
 
-fn parse_function(function: ASTFunctionDeclaration, switch_map: HashMap<String, SwitchMetadata>) -> Result<TFunctionDefinition, String> {
-    panic!("Not implemented");
-    // let mut function_instructions = parse_block(&function.body, switch_map);
-    // function_instructions.push(TInstruction::Return(TValue::Constant(0)));
-    // let t_function = TFunctionDefinition { name: function.name, body: function_instructions };
-    // Ok(t_function)
+fn parse_function(function: ASTFunctionDeclaration, switch_map: HashMap<String, SwitchMetadata>) -> TFunctionDefinition {
+    let Some(fun_body) = function.body else {
+        panic!("Function body is missing!");
+    };
+    let mut function_instructions = parse_block(&fun_body, switch_map);
+    function_instructions.push(TInstruction::Return(TValue::Constant(0)));
+    let t_function = TFunctionDefinition {
+        name: function.name,
+        params: function.params,
+        body: function_instructions
+    };
+    t_function
 }
 
 fn parse_block(block: &ASTBlock, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
@@ -175,38 +186,47 @@ fn parse_statement(statement: &ASTStatement, switch_map: HashMap<String, SwitchM
 }
 
 fn parse_forinit(init: &ASTForInit) -> Vec<TInstruction> {
-    panic!("Not implemented");
-    // let mut instructions = Vec::new();
-    //
-    // match init {
-    //     ASTForInit::InitDecl(declaration) => {
-    //         instructions.extend(parse_declaration(declaration));
-    //     }
-    //     ASTForInit::InitExp(Some(exp)) => {
-    //         emit_tacky(exp, &mut instructions);
-    //     }
-    //     ASTForInit::InitExp(None) => {
-    //         // Do nothing
-    //     }
-    // }
-    //
-    // instructions
+    let mut instructions = Vec::new();
+
+    match init {
+        ASTForInit::InitDecl(declaration) => {
+            instructions.extend(parse_variable_declaration(declaration));
+        }
+        ASTForInit::InitExp(Some(exp)) => {
+            emit_tacky(exp, &mut instructions);
+        }
+        ASTForInit::InitExp(None) => {
+            // Do nothing
+        }
+    }
+
+    instructions
 }
 
 fn parse_declaration(declaration: &ASTDeclaration) -> Vec<TInstruction> {
-    panic!("Not implemented");
-    // let mut instructions = Vec::new();
-    //
-    // match declaration {
-    //     ASTDeclaration::VariableDeclaration { name: var_name, init} => {
-    //         if let Some(init_unwrapped) = init {
-    //             let result = emit_tacky(init_unwrapped, &mut instructions);
-    //             instructions.push(TInstruction::Copy { src: result, dst: TValue::Var(var_name.clone())});
-    //         }
-    //     }
-    // }
-    //
-    // instructions
+    let mut instructions = Vec::new();
+
+    match declaration {
+        ASTDeclaration::VariableDeclaration(variable_declaration) => {
+            instructions.extend(parse_variable_declaration(variable_declaration));
+        }
+        ASTDeclaration::FunctionDeclaration(function_declaration) => {
+            // Do nothing. Functions are declared at the top level
+        }
+    }
+
+    instructions
+}
+
+fn parse_variable_declaration(variable_declaration: &ASTVariableDeclaration) -> Vec<TInstruction> {
+    let mut instructions = Vec::new();
+
+    if let Some(init_unwrapped) = variable_declaration.init.as_ref() {
+        let result = emit_tacky(init_unwrapped, &mut instructions);
+        instructions.push(TInstruction::Copy { src: result, dst: TValue::Var(variable_declaration.name.clone())});
+    }
+
+    instructions
 }
 
 fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TValue {
@@ -329,7 +349,19 @@ fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TVal
             result
         }
         ASTExpression::FunctionCall { name, args } => {
-            panic!("Not implemented");
+            let mut args_vec = Vec::new();
+            for arg in args {
+                let tmp_var_name = make_temporary();
+                let tmp_var = TValue::Var(tmp_var_name);
+                let arg_val = emit_tacky(arg, instructions);
+                instructions.push(TInstruction::Copy { src: arg_val, dst: tmp_var.clone() });
+                args_vec.push(tmp_var);
+            }
+
+            let result = TValue::Var(make_temporary());
+            instructions.push(TInstruction::FunCall { fun_name: name.clone(), args: args_vec, dst: result.clone() });
+
+            result
         }
     }
 }

@@ -1,6 +1,6 @@
 /*
-program = Program(function_definition)
-function_definition = Function(identifier, instruction* body)
+program = Program(function_definition*)
+function_definition = Function(identifier, identifier* params, instruction* body)
 instruction = Return(val)
             | Unary(unary_operator, val src, val dst)
             | Binary(binary_operator, val src1, val src2, val dst)
@@ -9,23 +9,25 @@ instruction = Return(val)
             | JumpIfZero(val condition, identifier target)
             | JumpIfNonZero(val condition, identifier target)
             | Label(identifier)
+            | FunCall(identifier fun_name, val* args, val dst)
 val = Constant(int) | Var(identifier)
 unary_operator = Complement | Negate
 binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
  */
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TProgram {
-    pub function_definition: TFunctionDefinition
+    pub functions: Vec<TFunctionDefinition>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TFunctionDefinition {
     pub name: String,
+    pub params: Vec<String>,
     pub body: Vec<TInstruction>
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TInstruction {
     Return(TValue),
     Unary { op: TUnaryOperator, src: TValue, dst: TValue },
@@ -35,6 +37,7 @@ pub enum TInstruction {
     JumpIfZero { val: TValue, label: String },
     JumpIfNonZero { val: TValue, label: String },
     Label { label: String },
+    FunCall { fun_name: String, args: Vec<TValue>, dst: TValue },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,7 +46,7 @@ pub enum TValue {
     Var(String)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TUnaryOperator {
     Complement,
     Negate,

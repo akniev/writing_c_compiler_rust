@@ -3,8 +3,8 @@ use crate::tacky::tacky_tokens::{TBinaryOperator, TInstruction, TProgram, TUnary
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
     let function_definition = ASMFunctionDefinition {
-        name: program.function_definition.name,
-        instructions: asm_instructions(program.function_definition.body)
+        name: program.functions[0].name.clone(),
+        instructions: asm_instructions(program.functions[0].body.clone())
     };
     ASMProgram { function_definition }
 }
@@ -102,9 +102,9 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                     ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
                 ].as_mut());
             }
-            // _ => {
-            //     panic!("Unsupported instruction");
-            // }
+            _ => {
+                panic!("Unsupported instruction");
+            }
         }
     }
 

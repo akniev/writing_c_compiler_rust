@@ -10,15 +10,18 @@ pub struct SwitchMetadata {
 type SwitchMap = HashMap<String, SwitchMetadata>;
 
 pub fn parse_switches(program: ASTProgram) -> HashMap<String, SwitchMetadata> {
-    panic!("Not implemented");
-    // let mut switch_map = HashMap::new();
-    // parse_function(program.function_definition, None, &mut switch_map);
-    // switch_map
+    let mut switch_map = HashMap::new();
+    for function in program.functions {
+        parse_function(function, None, &mut switch_map);
+    }
+    switch_map
 }
 
 fn parse_function(function: ASTFunctionDeclaration, switch_label: Option<String>, switch_map: &mut SwitchMap) {
-    panic!("Not implemented");
-    // parse_block(function.body, switch_label, switch_map);
+    let Some(function_body) = function.body else {
+        return
+    };
+    parse_block(function_body, switch_label, switch_map);
 }
 
 fn parse_block(block: ASTBlock, switch_label: Option<String>, switch_map: &mut SwitchMap) {
