@@ -7,8 +7,12 @@ static STACK_OFFSETS: LazyLock<Mutex<HashMap<String, i32>>> = LazyLock::new(|| M
 static TEMP_COUNTER: AtomicI32 = AtomicI32::new(0);
 
 pub fn fix_pseudo_in_program(program: ASMProgram) -> ASMProgram {
-    let n_function = fix_pseudo_in_function(program.function_definition);
-    ASMProgram { function_definition: n_function }
+    let mut new_functions = Vec::new();
+    for function in program.functions {
+        let n_function = fix_pseudo_in_function(function);
+        new_functions.push(n_function);
+    }
+    ASMProgram { functions: new_functions }
 }
 
 fn fix_pseudo_in_function(func: ASMFunctionDefinition) -> ASMFunctionDefinition {
@@ -64,6 +68,15 @@ fn fix_pseudo_in_instruction(instruction: ASMInstruction) -> ASMInstruction {
         ASMInstruction::AllocateStack(size) => {
             ASMInstruction::AllocateStack(size)
         }
+        ASMInstruction::DeallocateStack(size) => {
+            ASMInstruction::DeallocateStack(size)
+        }
+        ASMInstruction::Push(operand) => {
+            ASMInstruction::Push(fix_pseudo_in_operands(operand))
+        }
+        ASMInstruction::Call(identifier) => {
+            ASMInstruction::Call(identifier)
+        }
         ASMInstruction::Ret => {
             ASMInstruction::Ret
         }
@@ -78,12 +91,12 @@ fn fix_pseudo_in_operands(operand: ASMOperand) -> ASMOperand {
             let mut offsets = STACK_OFFSETS.lock().unwrap();
 
             if let Some(offset) = offsets.get(&identifier) {
-                return ASMOperand::Stack(*offset);
+                return ASMOperand::Stack(-*offset);
             } else {
                 TEMP_COUNTER.fetch_add(4, Ordering::Relaxed);
                 let offset = TEMP_COUNTER.load(Ordering::Relaxed);
                 offsets.insert(identifier.clone(), offset);
-                return ASMOperand::Stack(offset);
+                return ASMOperand::Stack(-offset);
             }
         },
         ASMOperand::Stack(offset) => ASMOperand::Stack(offset),

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::os::linux::raw::stat;
 use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTVariableDeclaration};
 
-pub fn typecheck(program: ASTProgram) {
+pub fn typecheck(program: ASTProgram) -> HashMap<String, Symbol> {
     let mut symbols = HashMap::new();
     for fun_decl in program.functions {
         typecheck_function_declaration(fun_decl, &mut symbols);
     }
+    symbols
 }
 
 fn typecheck_function_declaration(function_declaration: ASTFunctionDeclaration, symbols: &mut HashMap<String, Symbol>) {
@@ -146,16 +146,16 @@ fn typecheck_expression(expression: ASTExpression, symbols: &mut HashMap<String,
                 panic!("{} is not an integer", name);
             }
         }
-        ASTExpression::Constant(value) => {
+        ASTExpression::Constant(_) => {
             // Do nothing
         }
-        ASTExpression::Unary { op, exp } => {
+        ASTExpression::Unary { op: _, exp } => {
             typecheck_expression(exp.as_ref().clone(), symbols);
         }
-        ASTExpression::Postfix { op, exp } => {
+        ASTExpression::Postfix { op: _, exp } => {
             typecheck_expression(exp.as_ref().clone(), symbols);
         }
-        ASTExpression::Binary { op, lhs, rhs } => {
+        ASTExpression::Binary { op: _, lhs, rhs } => {
             typecheck_expression(lhs.as_ref().clone(), symbols);
             typecheck_expression(rhs.as_ref().clone(), symbols);
         }
@@ -163,7 +163,7 @@ fn typecheck_expression(expression: ASTExpression, symbols: &mut HashMap<String,
             typecheck_expression(lhs.as_ref().clone(), symbols);
             typecheck_expression(rhs.as_ref().clone(), symbols);
         }
-        ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
+        ASTExpression::CompoundAssignment { lhs, rhs, operator: _ } => {
             typecheck_expression(lhs.as_ref().clone(), symbols);
             typecheck_expression(rhs.as_ref().clone(), symbols);
         }
@@ -193,14 +193,14 @@ fn typecheck_expression(expression: ASTExpression, symbols: &mut HashMap<String,
 // MARK: - Helpers
 
 #[derive(Clone, Debug, PartialEq)]
-struct Symbol {
-    name: String,
-    _type: Type,
-    defined: bool,
+pub struct Symbol {
+    pub name: String,
+    pub _type: Type,
+    pub defined: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Type {
+pub enum Type {
     Int,
     FunType(i32)
 }

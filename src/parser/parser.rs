@@ -372,7 +372,7 @@ impl Parser {
                 };
                 result = ASTExpression::Constant(value);
             }
-            LexerToken::Identifier(name) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
+            LexerToken::Identifier(_) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
                 let function_call = self.parse_function_call();
                 result = function_call;
             }

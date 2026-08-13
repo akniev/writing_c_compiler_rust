@@ -1,8 +1,12 @@
 use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister};
 
 pub fn fix_movs_in_program(program: ASMProgram) -> ASMProgram {
-    let n_function = fix_movs_in_function(program.function_definition);
-    ASMProgram { function_definition: n_function }
+    let mut new_functions = vec![];
+    for function in program.functions {
+        let new_function = fix_movs_in_function(function);
+        new_functions.push(new_function);
+    }
+    ASMProgram { functions: new_functions }
 }
 
 fn fix_movs_in_function(func: ASMFunctionDefinition) -> ASMFunctionDefinition {
@@ -121,7 +125,10 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
         }
         ASMInstruction::Cdq |
         ASMInstruction::AllocateStack(_) |
+        ASMInstruction::DeallocateStack(_) |
         ASMInstruction::Ret |
+        ASMInstruction::Push(_) |
+        ASMInstruction::Call(_) |
         ASMInstruction::Jmp { label: _ } |
         ASMInstruction::JmpCC { cond_code: _, label: _ } |
         ASMInstruction::SetCC { cond_code: _, operand: _ } |

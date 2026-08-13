@@ -93,7 +93,7 @@ fn main() {
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
-        println!("{:?}", assembly_mov_fixed);
+        println!("{:#?}", assembly_mov_fixed);
     } else {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
@@ -102,7 +102,7 @@ fn main() {
 
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        typecheck(program_loops_labelled.clone());
+        let symbols = typecheck(program_loops_labelled.clone());
         println!("AST:");
         println!("{:#?}", program_loops_labelled);
 
@@ -117,7 +117,7 @@ fn main() {
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
-        let code = generate_code(assembly_mov_fixed);
+        let code = generate_code(assembly_mov_fixed, &symbols);
         println!("Assembly:");
         println!("{}", code);
 

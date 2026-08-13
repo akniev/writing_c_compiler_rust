@@ -210,7 +210,7 @@ fn parse_declaration(declaration: &ASTDeclaration) -> Vec<TInstruction> {
         ASTDeclaration::VariableDeclaration(variable_declaration) => {
             instructions.extend(parse_variable_declaration(variable_declaration));
         }
-        ASTDeclaration::FunctionDeclaration(function_declaration) => {
+        ASTDeclaration::FunctionDeclaration(_) => {
             // Do nothing. Functions are declared at the top level
         }
     }

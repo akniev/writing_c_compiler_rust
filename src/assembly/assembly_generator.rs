@@ -1,12 +1,61 @@
 use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
-use crate::tacky::tacky_tokens::{TBinaryOperator, TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
-    let function_definition = ASMFunctionDefinition {
-        name: program.functions[0].name.clone(),
-        instructions: asm_instructions(program.functions[0].body.clone())
+    let mut new_functions: Vec<ASMFunctionDefinition> = vec![];
+    for function in program.functions {
+        let new_function = generate_assembly_for_function(function);
+        new_functions.push(new_function);
+    }
+
+    ASMProgram { functions: new_functions }
+}
+
+fn generate_assembly_for_function(function: TFunctionDefinition) -> ASMFunctionDefinition {
+    let arg_registers = vec![
+        ASMRegister::DI,
+        ASMRegister::SI,
+        ASMRegister::DX,
+        ASMRegister::CX,
+        ASMRegister::R8,
+        ASMRegister::R9
+    ];
+
+    let mut instructions = vec![];
+
+    let split_at = function.params.len().min(6);
+    let register_params = &function.params[..split_at];
+    let stack_params = &function.params[split_at..];
+
+    let mut reg_index = 0;
+    for reg_param in register_params {
+        let r = arg_registers[reg_index];
+        instructions.push(
+            ASMInstruction::Mov {
+                src: ASMOperand::Reg(r),
+                dst: ASMOperand::Pseudo(reg_param.clone())
+            }
+        );
+        reg_index += 1;
+    }
+
+    let mut stack_index = 0;
+    for stack_param in stack_params {
+        instructions.push(
+            ASMInstruction::Mov {
+                src: ASMOperand::Stack(16 + stack_index * 8),
+                dst: ASMOperand::Pseudo(stack_param.clone())
+            }
+        );
+        stack_index += 1;
+    }
+
+    instructions.extend(asm_instructions(function.body));
+    let asm_function = ASMFunctionDefinition {
+        name: function.name.clone(),
+        instructions,
     };
-    ASMProgram { function_definition }
+    asm_function
 }
 
 fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
@@ -75,6 +124,65 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                     }
                 }
             }
+            TInstruction::FunCall { fun_name, args, dst } => {
+                let arg_registers = vec![
+                    ASMRegister::DI,
+                    ASMRegister::SI,
+                    ASMRegister::DX,
+                    ASMRegister::CX,
+                    ASMRegister::R8,
+                    ASMRegister::R9
+                ];
+
+                let split_at = args.len().min(6);
+                let register_args = &args[..split_at];
+                let stack_args = &args[split_at..];
+                let stack_padding = if stack_args.len() % 2 != 0 {
+                    8
+                } else {
+                    0
+                };
+
+                if stack_padding != 0 {
+                    instructions.push(ASMInstruction::AllocateStack(stack_padding));
+                }
+
+                // pass args in registers
+                let mut reg_index = 0;
+                for tacky_arg in register_args {
+                    let r = arg_registers[reg_index];
+                    let assembly_arg = tacky_arg.to_operand();
+                    instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(r) });
+                    reg_index += 1;
+                }
+
+                // pass args on stack
+                for tacky_arg in stack_args.iter().rev() {
+                    let assembly_arg = tacky_arg.to_operand();
+                    match assembly_arg {
+                        ASMOperand::Reg(_) | ASMOperand::Imm(_) => {
+                            instructions.push(ASMInstruction::Push(assembly_arg));
+                        }
+                        ASMOperand::Pseudo(_) | ASMOperand::Stack(_) => {
+                            instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(ASMRegister::AX) });
+                            instructions.push(ASMInstruction::Push(ASMOperand::Reg(ASMRegister::AX)));
+                        }
+                    }
+                }
+
+                // emit call instruction
+                instructions.push(ASMInstruction::Call(fun_name.clone()));
+
+                // adjust stack pointer
+                let bytes_to_remove: i32 = 8 * (stack_args.len() as i32) + stack_padding;
+                if bytes_to_remove > 0 {
+                    instructions.push(ASMInstruction::DeallocateStack(bytes_to_remove));
+                }
+
+                // retrieve return value
+                let assembly_dst = dst.to_operand();
+                instructions.push(ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: assembly_dst });
+            }
             TInstruction::JumpIfZero { val, label } => {
                 instructions.append(vec![
                     ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
@@ -101,9 +209,6 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                 instructions.append(vec![
                     ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
                 ].as_mut());
-            }
-            _ => {
-                panic!("Unsupported instruction");
             }
         }
     }

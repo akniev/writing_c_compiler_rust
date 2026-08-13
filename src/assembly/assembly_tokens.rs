@@ -12,17 +12,20 @@
              | SetCC(cond_code, operand)
              | Label(identifier)
              | AllocateStack(int)
+             | DeallocateStack(int)
+             | Push(operand)
+             | Call(identifier)
              | Ret
  unary_operator = Neg | Not
  binary_operator = Add | Sub | Mult
  operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int)
  cond_code = E | NE | G | GE | L | LE
- reg = AX | DX | CX | R10 | R11
+ reg = AX | CX | DX | DI | SI | R8 | R9 | R10 | R11
  */
 
 #[derive(Debug, PartialEq)]
 pub struct ASMProgram {
-    pub function_definition: ASMFunctionDefinition,
+    pub functions: Vec<ASMFunctionDefinition>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -44,6 +47,9 @@ pub enum ASMInstruction {
     Label(String),
     Cdq,
     AllocateStack(i32),
+    DeallocateStack(i32),
+    Push(ASMOperand),
+    Call(String),
     Ret,
 }
 
@@ -83,19 +89,24 @@ pub enum ASMOperand {
     Stack(i32),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ASMRegister {
     AX,
-    DX,
     CX,
+    DX,
+    DI,
+    SI,
+    R8,
+    R9,
     R10,
     R11,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMRegSize {
-    TwoBytes,
+    OneByte,
     FourBytes,
+    EightBytes,
 }
 
 impl ASMOperand {
@@ -103,11 +114,15 @@ impl ASMOperand {
         self.to_string(ASMRegSize::FourBytes)
     }
 
+    pub fn to_string_8b(&self) -> String {
+        self.to_string(ASMRegSize::EightBytes)
+    }
+
     pub fn to_string(&self, size: ASMRegSize) -> String {
         match self {
             ASMOperand::Imm(value) => format!("${}", value),
             ASMOperand::Reg(reg) => reg.to_string(size),
-            ASMOperand::Stack(offset) => format!("-{}(%rbp)", offset),
+            ASMOperand::Stack(offset) => format!("{}(%rbp)", offset),
             ASMOperand::Pseudo(_) => {
                 panic!("Pseudo-operands shouldn't be used here");
             },
@@ -118,15 +133,20 @@ impl ASMOperand {
 impl ASMRegister {
     pub fn to_string(&self, size: ASMRegSize) -> String {
         match size {
-            ASMRegSize::TwoBytes => self.to_string2b(),
+            ASMRegSize::OneByte => self.to_string1b(),
             ASMRegSize::FourBytes => self.to_string4b(),
+            ASMRegSize::EightBytes => self.to_string8b(),
         }
     }
-    fn to_string2b(&self) -> String {
+    fn to_string1b(&self) -> String {
         match self {
             ASMRegister::AX => "%al".to_string(),
-            ASMRegister::DX => "%dl".to_string(),
             ASMRegister::CX => "%cl".to_string(),
+            ASMRegister::DX => "%dl".to_string(),
+            ASMRegister::DI => "%dil".to_string(),
+            ASMRegister::SI => "%sil".to_string(),
+            ASMRegister::R8 => "%r8b".to_string(),
+            ASMRegister::R9 => "%r9b".to_string(),
             ASMRegister::R10 => "%r10b".to_string(),
             ASMRegister::R11 => "%r11b".to_string(),
         }
@@ -135,10 +155,28 @@ impl ASMRegister {
     fn to_string4b(&self) -> String {
         match self {
             ASMRegister::AX => "%eax".to_string(),
-            ASMRegister::DX => "%edx".to_string(),
             ASMRegister::CX => "%ecx".to_string(),
+            ASMRegister::DX => "%edx".to_string(),
+            ASMRegister::DI => "%edi".to_string(),
+            ASMRegister::SI => "%esi".to_string(),
+            ASMRegister::R8 => "%r8d".to_string(),
+            ASMRegister::R9 => "%r9d".to_string(),
             ASMRegister::R10 => "%r10d".to_string(),
             ASMRegister::R11 => "%r11d".to_string(),
+        }
+    }
+
+    fn to_string8b(&self) -> String {
+        match self {
+            ASMRegister::AX => "%rax".to_string(),
+            ASMRegister::CX => "%rcx".to_string(),
+            ASMRegister::DX => "%rdx".to_string(),
+            ASMRegister::DI => "%rdi".to_string(),
+            ASMRegister::SI => "%rsi".to_string(),
+            ASMRegister::R8 => "%r8".to_string(),
+            ASMRegister::R9 => "%r9".to_string(),
+            ASMRegister::R10 => "%r10".to_string(),
+            ASMRegister::R11 => "%r11".to_string(),
         }
     }
 }

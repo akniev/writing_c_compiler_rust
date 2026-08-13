@@ -1,26 +1,30 @@
+use std::collections::HashMap;
 use crate::assembly::assembly_tokens::{ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMProgram, ASMRegSize};
+use crate::parser::typechecker::{Symbol, Type};
 
-pub fn generate_code(asm: ASMProgram) -> String {
+pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> String {
     let mut result = String::new();
 
-    print_function(asm.function_definition, &mut result);
+    for function in asm.functions {
+        print_function(function, symbols, &mut result);
+    }
 
     result.push_str(".section .note.GNU-stack,\"\",@progbits");
 
     return result;
 }
 
-fn print_function(function: ASMFunctionDefinition, result: &mut String) {
+fn print_function(function: ASMFunctionDefinition, symbols: &HashMap<String, Symbol>, result: &mut String) {
     result.push_str(&format!("  .globl {}\n", function.name));
     result.push_str(&format!("{}:\n", function.name));
     result.push_str("  pushq %rbp\n");
     result.push_str("  movq %rsp, %rbp\n");
     for inst in function.instructions {
-        print_instruction(inst, result);
+        print_instruction(inst, symbols, result);
     }
 }
 
-fn print_instruction(inst: ASMInstruction, result: &mut String) {
+fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, result: &mut String) {
     match inst {
         ASMInstruction::Mov { src, dst } => {
             result.push_str(&format!("  movl {}, {}\n", src.to_string_4b(), dst.to_string_4b()));
@@ -40,6 +44,26 @@ fn print_instruction(inst: ASMInstruction, result: &mut String) {
         ASMInstruction::AllocateStack(size) => {
             result.push_str(&format!("  subq ${}, %rsp\n", size));
         }
+        ASMInstruction::DeallocateStack(size) => {
+            result.push_str(&format!("  addq ${}, %rsp\n", size))
+        }
+        ASMInstruction::Push(operand) => {
+            result.push_str(&format!("  pushq {}\n", operand.to_string_8b()));
+        }
+        ASMInstruction::Call(identifier) => {
+            let Some(symbol) = symbols.get(&identifier) else {
+                panic!("Symbol {} not found", identifier);
+            };
+            if !matches!(symbol._type, Type::FunType(_)) {
+                panic!("{} is not a function", identifier);
+            }
+            if symbol.defined {
+                result.push_str(&format!("  call {}\n", identifier));
+            } else {
+                result.push_str(&format!("  call {}@PLT\n", identifier));
+            }
+
+        }
         ASMInstruction::Ret => {
             result.push_str("  movq %rbp, %rsp\n");
             result.push_str("  popq %rbp\n");
@@ -55,7 +79,7 @@ fn print_instruction(inst: ASMInstruction, result: &mut String) {
             result.push_str(&format!("  j{} .L{}\n", cond_code.to_string(), label));
         }
         ASMInstruction::SetCC { cond_code, operand } => {
-            result.push_str(&format!("  set{} {}\n", cond_code.to_string(), operand.to_string(ASMRegSize::TwoBytes)));
+            result.push_str(&format!("  set{} {}\n", cond_code.to_string(), operand.to_string(ASMRegSize::OneByte)));
         }
         ASMInstruction::Label(label) => {
             result.push_str(&format!(".L{}:\n", label));
