@@ -62,7 +62,6 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
             } else {
                 result.push_str(&format!("  call {}@PLT\n", identifier));
             }
-
         }
         ASMInstruction::Ret => {
             result.push_str("  movq %rbp, %rsp\n");
