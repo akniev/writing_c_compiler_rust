@@ -1,12 +1,13 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
-<program> ::= { <function-declaration> }
+<program> ::= { <declaration> }
 <declaration> ::= <variable-declaration> | <function-declaration>
-<variable-declaration> ::= "int" <identifier> [ "=" <exp> ] ";"
-<function-declaration> ::= "int" <identifier> "(" <param-list> ")" ( <block> | ";" )
+<variable-declaration> ::= { <specifier> }+ <identifier> [ "=" <exp> ] ";"
+<function-declaration> ::= { <specifier> }+ <identifier> "(" <param-list> ")" ( <block> | ";" )
 <param-list> ::= "void" | "int" <identifier> { "," "int" <identifier> }
+<specifier> ::= "int" | "static" | "extern"
 <function> ::= "int" <identifier> "(" "void" ")" <block>
 <block> ::= "{" { <block-item> } "}"
 <block-item> ::= <statement> | <declaration>
@@ -46,12 +47,144 @@ struct Parser {
 
 impl Parser {
     fn parse_program(&mut self) -> ASTProgram {
-        let mut functions: Vec<ASTFunctionDeclaration> = vec![];
+        let mut declarations: Vec<ASTDeclaration> = vec![];
         while self.cursor < self.tokens.len() {
-            let function_declaration = self.parse_function_declaration();
-            functions.push(function_declaration);
+            let function_declaration = self.parse_declaration();
+            declarations.push(function_declaration);
         }
-        ASTProgram { functions }
+        ASTProgram { declarations: declarations }
+    }
+
+    fn parse_block(&mut self) -> ASTBlock {
+        self.expect(LexerTokenKind::OpenBrace);
+        let mut block_items: Vec<ASTBlockItem> = vec![];
+        while self.peek() != Some(LexerToken::CloseBrace) {
+            let block_item = self.parse_block_item();
+            block_items.push(block_item);
+        }
+        self.expect(LexerTokenKind::CloseBrace);
+        ASTBlock { items: block_items }
+    }
+
+    fn parse_block_item(&mut self) -> ASTBlockItem {
+        let next_token = self.peek().unwrap();
+        match next_token {
+            LexerToken::Int | LexerToken::Static | LexerToken::Extern => { // Block item is a declaration
+                let declaration = self.parse_declaration();
+                ASTBlockItem::Declaration(declaration)
+            }
+            _ => { // Block item is a statement
+                let statement = self.parse_statement();
+                ASTBlockItem::Statement(statement)
+            }
+        }
+    }
+
+    fn parse_declaration(&mut self) -> ASTDeclaration {
+        let (_, storage_class) = self.parse_type_and_storage_class();
+        let LexerToken::Identifier(name) = self.expect(LexerTokenKind::Identifier) else {
+            panic!("expected identifier");
+        };
+
+        match self.peek() {
+            Some(LexerToken::OpenParen) => {
+                let function_declaration = self.parse_function_declaration(storage_class, name.clone());
+                ASTDeclaration::FunctionDeclaration(function_declaration)
+            }
+            _ => {
+                let variable_declaration = self.parse_variable_declaration(storage_class, name.clone());
+                ASTDeclaration::VariableDeclaration(variable_declaration)
+            }
+        }
+    }
+
+    fn parse_function_declaration(&mut self, storage_class: Option<ASTStorageClass>, name: String) -> ASTFunctionDeclaration {
+        self.expect(LexerTokenKind::OpenParen);
+
+        let params: Vec<String> = self.parse_function_params();
+
+        self.expect(LexerTokenKind::CloseParen);
+
+        let block = if self.peek() == Some(LexerToken::Semicolon) {
+            self.take();
+            None
+        } else {
+            Some(self.parse_block())
+        };
+
+        ASTFunctionDeclaration { name, params, body: block, storage_class }
+    }
+
+    fn parse_variable_declaration(&mut self, storage_class: Option<ASTStorageClass>, name: String) -> ASTVariableDeclaration {
+        let next_token = self.peek().unwrap();
+
+        if matches!(&next_token, LexerToken::Semicolon) {
+            self.expect(LexerTokenKind::Semicolon);
+            let declaration = ASTVariableDeclaration { name, init: None, storage_class };
+            return declaration;
+        }
+
+        self.expect(LexerTokenKind::EqualSign);
+
+        let exp = self.parse_expression(0);
+        self.expect(LexerTokenKind::Semicolon);
+        let declaration = ASTVariableDeclaration { name, init: Some(exp), storage_class };
+
+        declaration
+    }
+
+    fn parse_type_and_storage_class(&mut self) -> (LexerToken, Option<ASTStorageClass>) {
+        let mut type_specifiers = vec![];
+        let mut storage_specifiers = vec![];
+        let allowed_specifiers = vec![
+            LexerTokenKind::Int,
+            LexerTokenKind::Static,
+            LexerTokenKind::Extern,
+        ];
+
+        while let Some(token) = self.peek() {
+            if !allowed_specifiers.contains(&token.kind()) {
+                break;
+            }
+
+            match token {
+                LexerToken::Int => {
+                    self.take();
+                    type_specifiers.push(token);
+                }
+                LexerToken::Static | LexerToken::Extern => {
+                    self.take();
+                    storage_specifiers.push(token);
+                }
+                _ => unreachable!("Invalid specifier"),
+            }
+        }
+
+        if type_specifiers.len() != 1 {
+            panic!("Invalid type specifier");
+        }
+
+        if storage_specifiers.len() > 1 {
+            panic!("Invalid storage class");
+        }
+
+        let _type = LexerToken::Int;
+
+        let storage_class = if storage_specifiers.len() == 1 {
+            Some(self.parse_storage_class(&storage_specifiers[0]))
+        } else {
+            None
+        };
+
+        (_type, storage_class)
+    }
+
+    fn parse_storage_class(&mut self, token: &LexerToken) -> ASTStorageClass {
+        match token {
+            LexerToken::Static => ASTStorageClass::Static,
+            LexerToken::Extern => ASTStorageClass::Extern,
+            _ => unreachable!("Invalid storage class"),
+        }
     }
 
     fn parse_function_params(&mut self) -> Vec<String> {
@@ -74,102 +207,6 @@ impl Parser {
             params.push(pn);
         }
         params
-    }
-
-    fn parse_block(&mut self) -> ASTBlock {
-        self.expect(LexerTokenKind::OpenBrace);
-        let mut block_items: Vec<ASTBlockItem> = vec![];
-        while self.peek() != Some(LexerToken::CloseBrace) {
-            let block_item = self.parse_block_item();
-            block_items.push(block_item);
-        }
-        self.expect(LexerTokenKind::CloseBrace);
-        ASTBlock { items: block_items }
-    }
-
-    fn parse_block_item(&mut self) -> ASTBlockItem {
-        let next_token = self.peek().unwrap();
-        match next_token {
-            LexerToken::Int => { // Block item is a declaration
-                let declaration = self.parse_declaration();
-                ASTBlockItem::Declaration(declaration)
-            }
-            _ => { // Block item is a statement
-                let statement = self.parse_statement();
-                ASTBlockItem::Statement(statement)
-            }
-        }
-    }
-
-    fn parse_declaration(&mut self) -> ASTDeclaration {
-        let third_token = self.peek_n(2);
-        match third_token {
-            Some(LexerToken::OpenParen) => {
-                let function_declaration = self.parse_function_declaration();
-                ASTDeclaration::FunctionDeclaration(function_declaration)
-            }
-            _ => {
-                let variable_declaration = self.parse_variable_declaration();
-                ASTDeclaration::VariableDeclaration(variable_declaration)
-            }
-        }
-    }
-
-    fn parse_function_declaration(&mut self) -> ASTFunctionDeclaration {
-        let LexerToken::Int =
-            self.expect(LexerTokenKind::Int)
-        else {
-            panic!("expected type specifier");
-        };
-
-        let LexerToken::Identifier(name) = self.expect(LexerTokenKind::Identifier) else {
-            panic!("expected identifier");
-        };
-
-        self.expect(LexerTokenKind::OpenParen);
-
-        let params: Vec<String> = self.parse_function_params();
-
-        self.expect(LexerTokenKind::CloseParen);
-
-        let block = if self.peek() == Some(LexerToken::Semicolon) {
-            self.take();
-            None
-        } else {
-            Some(self.parse_block())
-        };
-
-        ASTFunctionDeclaration { name, params, body: block }
-    }
-
-    fn parse_variable_declaration(&mut self) -> ASTVariableDeclaration {
-        let LexerToken::Int =
-            self.expect(LexerTokenKind::Int)
-        else {
-            panic!("expected type specifier");
-        };
-
-        let LexerToken::Identifier(var_name) =
-            self.expect(LexerTokenKind::Identifier)
-        else {
-            panic!("expected identifier");
-        };
-
-        let next_token = self.peek().unwrap();
-
-        if matches!(&next_token, LexerToken::Semicolon) {
-            self.expect(LexerTokenKind::Semicolon);
-            let declaration = ASTVariableDeclaration { name: var_name, init: None };
-            return declaration;
-        }
-
-        self.expect(LexerTokenKind::EqualSign);
-
-        let exp = self.parse_expression(0);
-        self.expect(LexerTokenKind::Semicolon);
-        let declaration = ASTVariableDeclaration { name: var_name, init: Some(exp) };
-
-        declaration
     }
 
     fn parse_statement(&mut self) -> ASTStatement {
@@ -292,9 +329,12 @@ impl Parser {
 
     fn parse_for_init(&mut self) -> ASTForInit {
         let next_token = self.peek();
-        if next_token != None && next_token.unwrap().kind().is_type_token() {
-            let decl = self.parse_variable_declaration();
-            ASTForInit::InitDecl(decl)
+        if let Some(next_token) = next_token && (next_token.kind().is_type_token() || next_token.kind().is_storage_class_token()) {
+            let decl = self.parse_declaration();
+            let ASTDeclaration::VariableDeclaration(var_decl) = decl else {
+                panic!("expected declaration");
+            };
+            ASTForInit::InitDecl(var_decl)
         } else {
             let exp = self.parse_optional_expression(0, LexerTokenKind::Semicolon);
             _ = self.expect(LexerTokenKind::Semicolon);
@@ -602,6 +642,13 @@ impl LexerTokenKind {
     fn is_type_token(self) -> bool {
         match self {
             LexerTokenKind::Int => true,
+            _ => false,
+        }
+    }
+
+    fn is_storage_class_token(self) -> bool {
+        match self {
+            LexerTokenKind::Static | LexerTokenKind::Extern => true,
             _ => false,
         }
     }

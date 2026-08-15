@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SwitchMetadata {
@@ -11,10 +11,21 @@ type SwitchMap = HashMap<String, SwitchMetadata>;
 
 pub fn parse_switches(program: ASTProgram) -> HashMap<String, SwitchMetadata> {
     let mut switch_map = HashMap::new();
-    for function in program.functions {
-        parse_function(function, None, &mut switch_map);
+    for decl in program.declarations {
+        parse_declaration(decl, None, &mut switch_map);
     }
     switch_map
+}
+
+fn parse_declaration(declaration: ASTDeclaration, switch_label: Option<String>, switch_map: &mut SwitchMap) {
+    match declaration {
+        ASTDeclaration::VariableDeclaration(_) => {
+            // Do nothing
+        }
+        ASTDeclaration::FunctionDeclaration(function) => {
+            parse_function(function, switch_label, switch_map);
+        }
+    }
 }
 
 fn parse_function(function: ASTFunctionDeclaration, switch_label: Option<String>, switch_map: &mut SwitchMap) {

@@ -6,15 +6,16 @@ use crate::common::global_counter::{get_global_counter};
 use crate::parser::parse_switches::SwitchMetadata;
 
 pub fn parse_tacky(program: ASTProgram, switch_map: HashMap<String, SwitchMetadata>) -> TProgram {
-    let mut t_functions = vec![];
-    for function in program.functions {
-        if function.body.is_some() {
-            let t_function = parse_function(function, switch_map.clone());
-            t_functions.push(t_function);
-        }
-    }
-    let t_program = TProgram { functions: t_functions };
-    t_program
+    panic!("Not implemented yet!");
+    // let mut t_functions = vec![];
+    // for function in program.declarations {
+    //     if function.body.is_some() {
+    //         let t_function = parse_function(function, switch_map.clone());
+    //         t_functions.push(t_function);
+    //     }
+    // }
+    // let t_program = TProgram { functions: t_functions };
+    // t_program
 }
 
 fn parse_function(function: ASTFunctionDeclaration, switch_map: HashMap<String, SwitchMetadata>) -> TFunctionDefinition {

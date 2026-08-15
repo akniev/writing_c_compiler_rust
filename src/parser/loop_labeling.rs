@@ -1,5 +1,5 @@
 use crate::common::global_counter::get_unique_label;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTFunctionDeclaration, ASTProgram, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTFunctionDeclaration, ASTProgram, ASTStatement};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum CurrentContext {
@@ -22,17 +22,33 @@ pub fn label_program(program: ASTProgram) -> ASTProgram {
         current_context: CurrentContext::None,
     };
 
-    let new_functions: Vec<ASTFunctionDeclaration> = program
-        .functions
+    let new_declarations= program
+        .declarations
         .into_iter()
-        .map(|function| label_function(function, &mut label_context))
+        .map(|decl| label_declaration(decl, &mut label_context))
         .collect();
-    ASTProgram { functions: new_functions }
+    ASTProgram { declarations: new_declarations }
+}
+
+fn label_declaration(declaration: ASTDeclaration, label_context: &mut LabelContext) -> ASTDeclaration {
+    match declaration {
+        ASTDeclaration::VariableDeclaration(variable_declaration) => {
+            ASTDeclaration::VariableDeclaration(variable_declaration)
+        }
+        ASTDeclaration::FunctionDeclaration(function_declaration) => {
+            ASTDeclaration::FunctionDeclaration(label_function(function_declaration, label_context))
+        }
+    }
 }
 
 fn label_function(function: ASTFunctionDeclaration, label_context: &mut LabelContext) -> ASTFunctionDeclaration {
     let new_body = function.body.map(|b|label_block(b, label_context));
-    ASTFunctionDeclaration { name: function.name, params: function.params, body: new_body }
+    ASTFunctionDeclaration {
+        name: function.name,
+        params: function.params,
+        body: new_body,
+        storage_class: function.storage_class,
+    }
 }
 
 fn label_block(block: ASTBlock, label_context: &mut LabelContext) -> ASTBlock {

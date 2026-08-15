@@ -3,8 +3,8 @@ use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpre
 
 pub fn typecheck(program: ASTProgram) -> HashMap<String, Symbol> {
     let mut symbols = HashMap::new();
-    for fun_decl in program.functions {
-        typecheck_function_declaration(fun_decl, &mut symbols);
+    for decl in program.declarations {
+        typecheck_declaration(&decl, &mut symbols);
     }
     symbols
 }

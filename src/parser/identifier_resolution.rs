@@ -5,12 +5,12 @@ use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_identifiers(program: ASTProgram) -> ASTProgram {
     let mut resolve_context = ResolveContext { identifier_map: HashMap::new(), labels: vec![] };
-    let mut new_functions: Vec<ASTFunctionDeclaration> = Vec::new();
-    for function_declaration in program.functions {
-        new_functions.push(resolve_function_declaration(function_declaration, &mut resolve_context));
+    let mut new_declarations = vec![];
+    for declaration in program.declarations {
+        new_declarations.push(resolve_declaration(declaration, &mut resolve_context));
     }
 
-    ASTProgram { functions: new_functions }
+    ASTProgram { declarations: new_declarations }
 }
 
 fn resolve_block(
@@ -177,7 +177,7 @@ fn resolve_declaration(
             ASTDeclaration::VariableDeclaration(variable_declaration)
         }
         ASTDeclaration::FunctionDeclaration(function_declaration) => {
-            let ASTFunctionDeclaration { name, params: _, body } = function_declaration.clone();
+            let ASTFunctionDeclaration { name, params: _, body, storage_class: _ } = function_declaration.clone();
             if body != None {
                 panic!("Nested function definitions are not allowed");
             }
@@ -189,21 +189,21 @@ fn resolve_declaration(
 }
 
 fn resolve_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
-    let ASTVariableDeclaration { name, init } = variable_declaration;
+    let ASTVariableDeclaration { name, init, storage_class: _ } = variable_declaration;
     if resolve_context.identifier_map.contains_key(&name) && resolve_context.identifier_map.get(&name).unwrap().from_current_scope {
         panic!("Variable {} is already defined", name);
     }
     let unique_name = get_unique_label(&name);
     resolve_context.identifier_map.insert(name, VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
     let new_init = init.map(|init| resolve_expression(init, resolve_context));
-    ASTVariableDeclaration { name: unique_name, init: new_init }
+    ASTVariableDeclaration { name: unique_name, init: new_init, storage_class: variable_declaration.storage_class }
 }
 
 fn resolve_function_declaration(
     function_declaration: ASTFunctionDeclaration,
     resolve_context: &mut ResolveContext,
 ) -> ASTFunctionDeclaration {
-    let ASTFunctionDeclaration { name, params: _, body: _ } = function_declaration.clone();
+    let ASTFunctionDeclaration { name, params: _, body: _, storage_class: _ } = function_declaration.clone();
     if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
         panic!("Duplicate declaration with different linkage for function {}", name);
     }
@@ -225,7 +225,8 @@ fn resolve_function_declaration(
     ASTFunctionDeclaration {
         name: function_declaration.name,
         params: new_params,
-        body: new_body
+        body: new_body,
+        storage_class: function_declaration.storage_class,
     }
 }
 

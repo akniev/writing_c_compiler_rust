@@ -1,11 +1,12 @@
 
 /*
-program = Program(function_declaration*)
+program = Program(declaration*)
 block_item = S(statement) | D(declaration)
 block = Block(block_item*)
 declaration = FunDecl(function_declaration) | VarDecl(variable_declaration)
-variable_declaration = (identifier name, exp? init)
-function_declaration = (identifier name, identifier* params, block? body)
+variable_declaration = (identifier name, exp? init, storage_class?)
+function_declaration = (identifier name, identifier* params, block? body, storage_class?)
+storage_class = Static | Extern
 for_init = InitDecl(variable_declaration) | InitExp(exp?)
 statement = Return(exp)
           | Expression(exp)
@@ -37,7 +38,7 @@ binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ASTProgram {
-    pub functions: Vec<ASTFunctionDeclaration>,
+    pub declarations: Vec<ASTDeclaration>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,12 +46,20 @@ pub struct ASTFunctionDeclaration {
     pub name: String,
     pub params: Vec<String>,
     pub body: Option<ASTBlock>,
+    pub storage_class: Option<ASTStorageClass>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ASTVariableDeclaration {
     pub name: String,
     pub init: Option<ASTExpression>,
+    pub storage_class: Option<ASTStorageClass>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASTStorageClass {
+    Static,
+    Extern,
 }
 
 #[derive(Debug, Clone, PartialEq)]
