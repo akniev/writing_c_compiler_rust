@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::assembly::assembly_tokens::{ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMProgram, ASMRegSize};
-use crate::parser::typechecker::{Symbol, Type};
+use crate::parser::typechecker::{Symbol, SymbolType};
 
 pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> String {
     let mut result = String::new();
@@ -54,14 +54,15 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
             let Some(symbol) = symbols.get(&identifier) else {
                 panic!("Symbol {} not found", identifier);
             };
-            if !matches!(symbol._type, Type::FunType(_)) {
+            if !matches!(symbol._type, SymbolType::FunType(_)) {
                 panic!("{} is not a function", identifier);
             }
-            if symbol.defined {
-                result.push_str(&format!("  call {}\n", identifier));
-            } else {
-                result.push_str(&format!("  call {}@PLT\n", identifier));
-            }
+            // TODO: Fix
+            // if symbol.defined {
+            //     result.push_str(&format!("  call {}\n", identifier));
+            // } else {
+            //     result.push_str(&format!("  call {}@PLT\n", identifier));
+            // }
         }
         ASMInstruction::Ret => {
             result.push_str("  movq %rbp, %rsp\n");
