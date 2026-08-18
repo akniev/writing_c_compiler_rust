@@ -1,29 +1,36 @@
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 use std::sync::atomic::{AtomicI32, Ordering};
-use crate::assembly::assembly_tokens::{ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram};
+use crate::assembly::assembly_tokens::{ASMInstruction, ASMOperand, ASMProgram, ASMTopLevel};
 
 static STACK_OFFSETS: LazyLock<Mutex<HashMap<String, i32>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 static TEMP_COUNTER: AtomicI32 = AtomicI32::new(0);
 
 pub fn fix_pseudo_in_program(program: ASMProgram) -> ASMProgram {
-    let mut new_functions = Vec::new();
-    for function in program.functions {
-        let n_function = fix_pseudo_in_function(function);
-        new_functions.push(n_function);
+    let mut top_level = Vec::new();
+    for top_level_item in program.top_level {
+        let n_function = fix_pseudo_in_top_level(top_level_item);
+        top_level.push(n_function);
     }
-    ASMProgram { functions: new_functions }
+    ASMProgram { top_level }
 }
 
-fn fix_pseudo_in_function(func: ASMFunctionDefinition) -> ASMFunctionDefinition {
-    TEMP_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
-    let mut new_instructions = vec![];
-    for instruction in func.instructions {
-        let n_instruction = fix_pseudo_in_instruction(instruction);
-        new_instructions.push(n_instruction);
+fn fix_pseudo_in_top_level(top_level: ASMTopLevel) -> ASMTopLevel {
+    match top_level {
+        ASMTopLevel::Function { name, global, instructions } => {
+            TEMP_COUNTER.store(0, std::sync::atomic::Ordering::Relaxed);
+            let mut new_instructions = vec![];
+            for instruction in instructions {
+                let n_instruction = fix_pseudo_in_instruction(instruction);
+                new_instructions.push(n_instruction);
+            }
+            new_instructions.insert(0, ASMInstruction::AllocateStack(TEMP_COUNTER.load(Ordering::Relaxed)));
+            ASMTopLevel::Function { name, global, instructions: new_instructions }
+        }
+        ASMTopLevel::StaticVariable { name: _, global: _, init: _ } => {
+            top_level
+        }
     }
-    new_instructions.insert(0, ASMInstruction::AllocateStack(TEMP_COUNTER.load(Ordering::Relaxed)));
-    ASMFunctionDefinition { name: func.name, instructions: new_instructions }
 }
 
 fn fix_pseudo_in_instruction(instruction: ASMInstruction) -> ASMInstruction {
@@ -100,5 +107,6 @@ fn fix_pseudo_in_operands(operand: ASMOperand) -> ASMOperand {
             }
         },
         ASMOperand::Stack(offset) => ASMOperand::Stack(offset),
+        ASMOperand::Data(identifier) => ASMOperand::Data(identifier),
     }
 }

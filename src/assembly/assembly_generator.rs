@@ -1,19 +1,33 @@
-use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
-use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMUnaryOperator};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TTopLevel, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
-    // TODO: Fix
-    panic!("Not implemented");
-    // let mut new_functions: Vec<ASMFunctionDefinition> = vec![];
-    // for function in program.top_level {
-    //     let new_function = generate_assembly_for_function(function);
-    //     new_functions.push(new_function);
-    // }
-    //
-    // ASMProgram { functions: new_functions }
+    let mut top_level = vec![];
+
+    for item in program.top_level {
+        let top_level_item = generate_assembly_for_top_level(item);
+        top_level.push(top_level_item);
+    }
+
+    ASMProgram { top_level }
 }
 
-fn generate_assembly_for_function(function: TFunction) -> ASMFunctionDefinition {
+fn generate_assembly_for_top_level(item: TTopLevel) -> ASMTopLevel {
+    match item {
+        TTopLevel::Function(func) => {
+            generate_assembly_for_function(func)
+        }
+        TTopLevel::StaticVariable(static_variable) => {
+            ASMTopLevel::StaticVariable {
+                name: static_variable.name,
+                global: static_variable.global,
+                init: static_variable.init,
+            }
+        }
+    }
+}
+
+fn generate_assembly_for_function(function: TFunction) -> ASMTopLevel {
     let arg_registers = vec![
         ASMRegister::DI,
         ASMRegister::SI,
@@ -53,8 +67,9 @@ fn generate_assembly_for_function(function: TFunction) -> ASMFunctionDefinition 
     }
 
     instructions.extend(asm_instructions(function.body));
-    let asm_function = ASMFunctionDefinition {
+    let asm_function = ASMTopLevel::Function {
         name: function.name.clone(),
+        global: function.global,
         instructions,
     };
     asm_function
@@ -165,7 +180,7 @@ fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
                         ASMOperand::Reg(_) | ASMOperand::Imm(_) => {
                             instructions.push(ASMInstruction::Push(assembly_arg));
                         }
-                        ASMOperand::Pseudo(_) | ASMOperand::Stack(_) => {
+                        ASMOperand::Pseudo(_) | ASMOperand::Stack(_) | ASMOperand::Data(_) => {
                             instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(ASMRegister::AX) });
                             instructions.push(ASMInstruction::Push(ASMOperand::Reg(ASMRegister::AX)));
                         }

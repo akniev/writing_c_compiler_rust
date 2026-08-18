@@ -10,7 +10,7 @@ use std::path::Path;
 use std::process::Command;
 use crate::assembly::assembly_generator::generate_assembly;
 use crate::assembly::code_emission::generate_code;
-use crate::assembly::fix_mov::fix_movs_in_program;
+use crate::assembly::fixup_instructions::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
 use crate::lexer::lexer::tokenize;
 use crate::parser::loop_labeling::label_program;

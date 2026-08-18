@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use crate::assembly::assembly_tokens::{ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMProgram, ASMRegSize};
+use crate::assembly::assembly_tokens::{ASMCondCode, ASMInstruction, ASMProgram, ASMRegSize, ASMTopLevel};
 use crate::parser::typechecker::{Symbol, SymbolType};
 
 pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> String {
     let mut result = String::new();
 
-    for function in asm.functions {
-        print_function(function, symbols, &mut result);
+    for function in asm.top_level {
+        print_top_level(function, symbols, &mut result);
     }
 
     result.push_str(".section .note.GNU-stack,\"\",@progbits");
@@ -14,14 +14,22 @@ pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> Stri
     return result;
 }
 
-fn print_function(function: ASMFunctionDefinition, symbols: &HashMap<String, Symbol>, result: &mut String) {
-    result.push_str(&format!("  .globl {}\n", function.name));
-    result.push_str(&format!("{}:\n", function.name));
-    result.push_str("  pushq %rbp\n");
-    result.push_str("  movq %rsp, %rbp\n");
-    for inst in function.instructions {
-        print_instruction(inst, symbols, result);
+fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, result: &mut String) {
+    match top_level {
+        ASMTopLevel::Function { name, global, instructions } => {
+            result.push_str(&format!("  .globl {}\n", name));
+            result.push_str(&format!("{}:\n", name));
+            result.push_str("  pushq %rbp\n");
+            result.push_str("  movq %rsp, %rbp\n");
+            for inst in instructions {
+                print_instruction(inst, symbols, result);
+            }
+        }
+        ASMTopLevel::StaticVariable { name, global, init } => {
+            panic!("Not implemented yet");
+        }
     }
+
 }
 
 fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, result: &mut String) {

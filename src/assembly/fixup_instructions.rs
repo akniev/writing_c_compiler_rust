@@ -1,28 +1,35 @@
-use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel};
 
 pub fn fix_movs_in_program(program: ASMProgram) -> ASMProgram {
-    let mut new_functions = vec![];
-    for function in program.functions {
-        let new_function = fix_movs_in_function(function);
-        new_functions.push(new_function);
+    let mut top_level = vec![];
+    for top_level_item in program.top_level {
+        let fixed_top_level_item = fix_movs_in_function(top_level_item);
+        top_level.push(fixed_top_level_item);
     }
-    ASMProgram { functions: new_functions }
+    ASMProgram { top_level }
 }
 
-fn fix_movs_in_function(func: ASMFunctionDefinition) -> ASMFunctionDefinition {
-    let mut new_instructions = vec![];
-    for instruction in func.instructions {
-        let mut n_instructions = fix_movs_in_instruction(instruction);
-        new_instructions.append(&mut n_instructions);
+fn fix_movs_in_function(top_level: ASMTopLevel) -> ASMTopLevel {
+    match top_level {
+        ASMTopLevel::Function { name, global, instructions } => {
+            let mut new_instructions = vec![];
+            for instruction in instructions {
+                let mut n_instructions = fix_movs_in_instruction(instruction);
+                new_instructions.append(&mut n_instructions);
+            }
+            ASMTopLevel::Function { name, global, instructions: new_instructions }
+        }
+        ASMTopLevel::StaticVariable { name: _, global: _, init: _ } => {
+            top_level
+        }
     }
-    ASMFunctionDefinition { name: func.name, instructions: new_instructions }
 }
 
 fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
     match instruction.clone() {
         ASMInstruction::Mov { src, dst } => {
             match (src.clone(), dst.clone()) {
-                (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
+                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
                     vec![
                         ASMInstruction::Mov { src, dst: ASMOperand::Reg(ASMRegister::R10) },
                         ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::R10), dst }
@@ -35,7 +42,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
         }
         ASMInstruction::Cmp { operand1, operand2 } => {
             match (operand1.clone(), operand2.clone()) {
-                (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
+                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
                     vec![
                         ASMInstruction::Mov { src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
                         ASMInstruction::Cmp { operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
@@ -64,7 +71,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             operand2
         } => {
             match (operand1.clone(), operand2.clone()) {
-                (ASMOperand::Stack(_), ASMOperand::Stack(_)) => {
+                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
                     vec![
                         ASMInstruction::Mov { src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
                         ASMInstruction::Binary { binop, operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
@@ -81,7 +88,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             operand2
         } => {
             match operand2 {
-                ASMOperand::Stack(_) => {
+                ASMOperand::Stack(_) | ASMOperand::Data(_) => {
                     vec![
                         ASMInstruction::Mov { src: operand2.clone(), dst: ASMOperand::Reg(ASMRegister::R11) },
                         ASMInstruction::Binary { binop, operand1, operand2: ASMOperand::Reg(ASMRegister::R11) },

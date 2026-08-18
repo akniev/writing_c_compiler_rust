@@ -1,6 +1,7 @@
 /*
- program = Program(function_definition)
- function_definition = Function(identifier name, instruction* instructions)
+ program = Program(top_level*)
+ top_level = Function(identifier name, bool global, instruction* instructions)
+           | StaticVariable(identifier name, bool global, int init)
  instruction = Mov(operand src, operand dst)
              | Unary(unary_operator, operand)
              | Binary(binary_operator, operand, operand)
@@ -18,21 +19,27 @@
              | Ret
  unary_operator = Neg | Not
  binary_operator = Add | Sub | Mult
- operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int)
+ operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int) | Data(identifier)
  cond_code = E | NE | G | GE | L | LE
  reg = AX | CX | DX | DI | SI | R8 | R9 | R10 | R11
  */
 
 #[derive(Debug, PartialEq)]
 pub struct ASMProgram {
-    pub functions: Vec<ASMFunctionDefinition>,
+    pub top_level: Vec<ASMTopLevel>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ASMFunctionDefinition {
-    pub name: String,
-    pub instructions: Vec<ASMInstruction>,
+pub enum ASMTopLevel {
+    Function { name: String, global: bool, instructions: Vec<ASMInstruction> },
+    StaticVariable { name: String, global: bool, init: i32 },
 }
+
+// #[derive(Debug, PartialEq)]
+// pub struct ASMFunctionDefinition {
+//     pub name: String,
+//     pub instructions: Vec<ASMInstruction>,
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMInstruction {
@@ -87,6 +94,7 @@ pub enum ASMOperand {
     Reg(ASMRegister),
     Pseudo(String),
     Stack(i32),
+    Data(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -123,8 +131,8 @@ impl ASMOperand {
             ASMOperand::Imm(value) => format!("${}", value),
             ASMOperand::Reg(reg) => reg.to_string(size),
             ASMOperand::Stack(offset) => format!("{}(%rbp)", offset),
-            ASMOperand::Pseudo(_) => {
-                panic!("Pseudo-operands shouldn't be used here");
+            ASMOperand::Pseudo(_) | ASMOperand::Data(_) => {
+                panic!("Pseudo- and data- operands shouldn't be used here");
             },
         }
     }
