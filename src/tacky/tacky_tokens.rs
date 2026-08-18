@@ -1,6 +1,7 @@
 /*
-program = Program(function_definition*)
-function_definition = Function(identifier, identifier* params, instruction* body)
+program = Program(top_level*)
+top_level = Function(identifier, bool global, identifier* params, instruction* body)
+          | StaticVariable(identifier, bool global, int init)
 instruction = Return(val)
             | Unary(unary_operator, val src, val dst)
             | Binary(binary_operator, val src1, val src2, val dst)
@@ -17,14 +18,28 @@ binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TProgram {
-    pub functions: Vec<TFunctionDefinition>
+    pub top_level: Vec<TTopLevel>
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TFunctionDefinition {
+pub enum TTopLevel {
+    Function(TFunction),
+    StaticVariable(TStaticVariable),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TFunction {
     pub name: String,
+    pub global: bool,
     pub params: Vec<String>,
     pub body: Vec<TInstruction>
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TStaticVariable {
+    pub name: String,
+    pub global: bool,
+    pub init: i32
 }
 
 #[derive(Debug, Clone, PartialEq)]

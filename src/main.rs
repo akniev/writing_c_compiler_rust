@@ -72,24 +72,24 @@ fn main() {
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
         println!("{:?}", program_loops_labelled);
-        typecheck(program_loops_labelled.clone());
+        _ = typecheck(program_loops_labelled.clone());
     } else if args.tacky {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        typecheck(program_loops_labelled.clone());
+        let symbols = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
-        let tacky = parse_tacky(program_loops_labelled, switch_map);
+        let tacky = parse_tacky(program_loops_labelled, symbols, switch_map);
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        typecheck(program_loops_labelled.clone());
+        let symbols = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
-        let tacky = parse_tacky(program_loops_labelled, switch_map);
+        let tacky = parse_tacky(program_loops_labelled, symbols, switch_map);
         let assembly = generate_assembly(tacky);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
@@ -110,7 +110,7 @@ fn main() {
         println!("Switch map:");
         println!("{:#?}", switch_map);
 
-        let tacky = parse_tacky(program_loops_labelled, switch_map);
+        let tacky = parse_tacky(program_loops_labelled, symbols.clone(), switch_map);
         println!("Tacky:");
         println!("{}", print_tacky(&tacky));
 

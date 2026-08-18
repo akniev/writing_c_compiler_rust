@@ -333,7 +333,7 @@ pub enum SymbolAttrs {
 }
 
 impl SymbolAttrs {
-    fn is_global(&self) -> bool {
+    pub fn is_global(&self) -> bool {
         match self {
             SymbolAttrs::FunAttr { global, .. } => *global,
             SymbolAttrs::StaticAttr { global, .. } => *global,
@@ -341,7 +341,7 @@ impl SymbolAttrs {
         }
     }
 
-    fn is_defined(&self) -> bool {
+    pub fn is_defined(&self) -> bool {
         match self {
             SymbolAttrs::FunAttr { defined, .. } => *defined,
             SymbolAttrs::StaticAttr { init, .. } => {
@@ -351,7 +351,7 @@ impl SymbolAttrs {
         }
     }
 
-    fn get_init(&self) -> Option<SymbolInitialValue> {
+    pub fn get_init(&self) -> Option<SymbolInitialValue> {
         match self {
             SymbolAttrs::FunAttr { .. } => None,
             SymbolAttrs::StaticAttr { init, .. } => Some(init.clone()),

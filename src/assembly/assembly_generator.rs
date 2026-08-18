@@ -1,17 +1,19 @@
 use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMFunctionDefinition, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMUnaryOperator};
-use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TUnaryOperator, TValue};
 
 pub fn generate_assembly(program: TProgram) -> ASMProgram {
-    let mut new_functions: Vec<ASMFunctionDefinition> = vec![];
-    for function in program.functions {
-        let new_function = generate_assembly_for_function(function);
-        new_functions.push(new_function);
-    }
-
-    ASMProgram { functions: new_functions }
+    // TODO: Fix
+    panic!("Not implemented");
+    // let mut new_functions: Vec<ASMFunctionDefinition> = vec![];
+    // for function in program.top_level {
+    //     let new_function = generate_assembly_for_function(function);
+    //     new_functions.push(new_function);
+    // }
+    //
+    // ASMProgram { functions: new_functions }
 }
 
-fn generate_assembly_for_function(function: TFunctionDefinition) -> ASMFunctionDefinition {
+fn generate_assembly_for_function(function: TFunction) -> ASMFunctionDefinition {
     let arg_registers = vec![
         ASMRegister::DI,
         ASMRegister::SI,

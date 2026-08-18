@@ -1,35 +1,105 @@
 use std::collections::HashMap;
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTVariableDeclaration};
-use crate::tacky::tacky_tokens::{TBinaryOperator, TFunctionDefinition, TInstruction, TProgram, TUnaryOperator, TValue};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTStorageClass, ASTUnaryOperator, ASTVariableDeclaration};
+use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TStaticVariable, TTopLevel, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
 use crate::parser::parse_switches::SwitchMetadata;
+use crate::parser::typechecker::{Symbol, SymbolAttrs, SymbolInitialValue};
 
-pub fn parse_tacky(program: ASTProgram, switch_map: HashMap<String, SwitchMetadata>) -> TProgram {
-    panic!("Not implemented yet!");
-    // let mut t_functions = vec![];
-    // for function in program.declarations {
-    //     if function.body.is_some() {
-    //         let t_function = parse_function(function, switch_map.clone());
-    //         t_functions.push(t_function);
-    //     }
-    // }
-    // let t_program = TProgram { functions: t_functions };
-    // t_program
+pub fn parse_tacky(
+    program: ASTProgram,
+    symbols: HashMap<String, Symbol>,
+    switch_map: HashMap<String, SwitchMetadata>,
+) -> TProgram {
+    let mut top_level = vec![];
+
+    top_level.extend(convert_symbols_to_tacky(symbols.clone()));
+
+    for decl in program.declarations {
+        match decl {
+            ASTDeclaration::FunctionDeclaration(func_decl) => {
+                if func_decl.body.is_some() {
+                    let tfunc = parse_function(func_decl, &symbols, switch_map.clone());
+                    top_level.push(TTopLevel::Function(tfunc));
+                }
+            }
+            ASTDeclaration::VariableDeclaration(var_decl) => {
+                // Do nothing
+            }
+        }
+    }
+
+    let tprog = TProgram { top_level };
+    tprog
 }
 
-fn parse_function(function: ASTFunctionDeclaration, switch_map: HashMap<String, SwitchMetadata>) -> TFunctionDefinition {
+fn convert_symbols_to_tacky(symbols: HashMap<String, Symbol>) -> Vec<TTopLevel> {
+    let mut static_vars = vec![];
+
+    for (symbol_name, symbol) in symbols {
+        match symbol.identifier_attrs {
+            SymbolAttrs::StaticAttr { init, global } => {
+                match init {
+                    SymbolInitialValue::Initial(i) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: i.clone() }),
+                    SymbolInitialValue::Tentative => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: 0 } ),
+                    SymbolInitialValue::NoInitializer => {
+                        // Do nothing
+                    }
+                }
+            }
+            _ => {
+                // Do nothing
+            }
+        }
+    }
+
+    static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
+}
+
+fn parse_function(
+    function: ASTFunctionDeclaration,
+    symbols: &HashMap<String, Symbol>,
+    switch_map: HashMap<String, SwitchMetadata>
+) -> TFunction {
     let Some(fun_body) = function.body else {
         panic!("Function body is missing!");
     };
+    let Some(fun_decl) = symbols.get(&function.name) else {
+        panic!("Function not found!");
+    };
     let mut function_instructions = parse_block(&fun_body, switch_map);
     function_instructions.push(TInstruction::Return(TValue::Constant(0)));
-    let t_function = TFunctionDefinition {
+    let t_function = TFunction {
         name: function.name,
+        global: fun_decl.identifier_attrs.is_global(),
         params: function.params,
         body: function_instructions
     };
     t_function
+}
+
+fn parse_file_variable_declaration(
+    var_decl: &ASTVariableDeclaration,
+    symbols: &HashMap<String, Symbol>,
+) -> TTopLevel {
+    let Some(symbol) = symbols.get(&var_decl.name) else {
+        panic!("Symbol not found!");
+    };
+
+    let init = match symbol.identifier_attrs.get_init() {
+        Some(SymbolInitialValue::Tentative | SymbolInitialValue::NoInitializer) | None => {
+            panic!("Variable is not initialized!");
+        }
+        Some(SymbolInitialValue::Initial(init_val)) => {
+            init_val.clone()
+        }
+    };
+    let static_var = TStaticVariable {
+        name: var_decl.name.clone(),
+        global: symbol.identifier_attrs.is_global(),
+        init,
+    };
+    TTopLevel::StaticVariable(static_var)
 }
 
 fn parse_block(block: &ASTBlock, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
