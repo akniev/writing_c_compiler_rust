@@ -11,13 +11,16 @@ pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> Stri
 
     result.push_str(".section .note.GNU-stack,\"\",@progbits");
 
-    return result;
+    result
 }
 
 fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, result: &mut String) {
     match top_level {
         ASMTopLevel::Function { name, global, instructions } => {
-            result.push_str(&format!("  .globl {}\n", name));
+            if global {
+                result.push_str(&format!("  .globl {}\n", name));
+            }
+            result.push_str("  .text\n");
             result.push_str(&format!("{}:\n", name));
             result.push_str("  pushq %rbp\n");
             result.push_str("  movq %rsp, %rbp\n");
@@ -26,7 +29,21 @@ fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, re
             }
         }
         ASMTopLevel::StaticVariable { name, global, init } => {
-            panic!("Not implemented yet");
+            if global {
+                result.push_str(&format!("  .globl {}\n", name))
+            }
+            if init == 0 {
+                result.push_str("  .bss\n");
+                result.push_str("  .align 4\n");
+                result.push_str(&format!("{}:\n", name));
+                result.push_str("  .zero 4\n");
+            } else {
+                result.push_str("  .data\n");
+                result.push_str("  .align 4\n");
+                result.push_str(&format!("{}:\n", name));
+                result.push_str(&format!("  .long {}\n", init));
+            }
+
         }
     }
 
@@ -65,12 +82,11 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
             if !matches!(symbol._type, SymbolType::FunType(_)) {
                 panic!("{} is not a function", identifier);
             }
-            // TODO: Fix
-            // if symbol.defined {
-            //     result.push_str(&format!("  call {}\n", identifier));
-            // } else {
-            //     result.push_str(&format!("  call {}@PLT\n", identifier));
-            // }
+            if symbol.identifier_attrs.is_defined() {
+                result.push_str(&format!("  call {}\n", identifier));
+            } else {
+                result.push_str(&format!("  call {}@PLT\n", identifier));
+            }
         }
         ASMInstruction::Ret => {
             result.push_str("  movq %rbp, %rsp\n");

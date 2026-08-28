@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::env::var;
 use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTStorageClass, ASTVariableDeclaration};
 
 pub fn typecheck(program: ASTProgram) -> HashMap<String, Symbol> {
@@ -344,7 +343,7 @@ impl SymbolAttrs {
     pub fn is_defined(&self) -> bool {
         match self {
             SymbolAttrs::FunAttr { defined, .. } => *defined,
-            SymbolAttrs::StaticAttr { init, .. } => {
+            SymbolAttrs::StaticAttr { init: _, .. } => {
                 panic!("Not implemented yet")
             },
             SymbolAttrs::LocalAttr => true,

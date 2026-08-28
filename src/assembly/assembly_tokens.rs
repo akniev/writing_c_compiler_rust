@@ -131,7 +131,8 @@ impl ASMOperand {
             ASMOperand::Imm(value) => format!("${}", value),
             ASMOperand::Reg(reg) => reg.to_string(size),
             ASMOperand::Stack(offset) => format!("{}(%rbp)", offset),
-            ASMOperand::Pseudo(_) | ASMOperand::Data(_) => {
+            ASMOperand::Data(identifier) => format!("{}(%rip)", identifier),
+            ASMOperand::Pseudo(_) => {
                 panic!("Pseudo- and data- operands shouldn't be used here");
             },
         }

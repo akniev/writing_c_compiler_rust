@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTStorageClass, ASTUnaryOperator, ASTVariableDeclaration};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTVariableDeclaration};
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TStaticVariable, TTopLevel, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
@@ -8,12 +8,12 @@ use crate::parser::typechecker::{Symbol, SymbolAttrs, SymbolInitialValue};
 
 pub fn parse_tacky(
     program: ASTProgram,
-    symbols: HashMap<String, Symbol>,
+    symbols: &HashMap<String, Symbol>,
     switch_map: HashMap<String, SwitchMetadata>,
 ) -> TProgram {
     let mut top_level = vec![];
 
-    top_level.extend(convert_symbols_to_tacky(symbols.clone()));
+    top_level.extend(convert_symbols_to_tacky(symbols));
 
     for decl in program.declarations {
         match decl {
@@ -23,7 +23,7 @@ pub fn parse_tacky(
                     top_level.push(TTopLevel::Function(tfunc));
                 }
             }
-            ASTDeclaration::VariableDeclaration(var_decl) => {
+            ASTDeclaration::VariableDeclaration(_) => {
                 // Do nothing
             }
         }
@@ -33,11 +33,11 @@ pub fn parse_tacky(
     tprog
 }
 
-fn convert_symbols_to_tacky(symbols: HashMap<String, Symbol>) -> Vec<TTopLevel> {
+fn convert_symbols_to_tacky(symbols: &HashMap<String, Symbol>) -> Vec<TTopLevel> {
     let mut static_vars = vec![];
 
     for (symbol_name, symbol) in symbols {
-        match symbol.identifier_attrs {
+        match symbol.clone().identifier_attrs {
             SymbolAttrs::StaticAttr { init, global } => {
                 match init {
                     SymbolInitialValue::Initial(i) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: i.clone() }),
@@ -78,29 +78,29 @@ fn parse_function(
     t_function
 }
 
-fn parse_file_variable_declaration(
-    var_decl: &ASTVariableDeclaration,
-    symbols: &HashMap<String, Symbol>,
-) -> TTopLevel {
-    let Some(symbol) = symbols.get(&var_decl.name) else {
-        panic!("Symbol not found!");
-    };
-
-    let init = match symbol.identifier_attrs.get_init() {
-        Some(SymbolInitialValue::Tentative | SymbolInitialValue::NoInitializer) | None => {
-            panic!("Variable is not initialized!");
-        }
-        Some(SymbolInitialValue::Initial(init_val)) => {
-            init_val.clone()
-        }
-    };
-    let static_var = TStaticVariable {
-        name: var_decl.name.clone(),
-        global: symbol.identifier_attrs.is_global(),
-        init,
-    };
-    TTopLevel::StaticVariable(static_var)
-}
+// fn parse_file_variable_declaration(
+//     var_decl: &ASTVariableDeclaration,
+//     symbols: &HashMap<String, Symbol>,
+// ) -> TTopLevel {
+//     let Some(symbol) = symbols.get(&var_decl.name) else {
+//         panic!("Symbol not found!");
+//     };
+//
+//     let init = match symbol.identifier_attrs.get_init() {
+//         Some(SymbolInitialValue::Tentative | SymbolInitialValue::NoInitializer) | None => {
+//             panic!("Variable is not initialized!");
+//         }
+//         Some(SymbolInitialValue::Initial(init_val)) => {
+//             init_val.clone()
+//         }
+//     };
+//     let static_var = TStaticVariable {
+//         name: var_decl.name.clone(),
+//         global: symbol.identifier_attrs.is_global(),
+//         init,
+//     };
+//     TTopLevel::StaticVariable(static_var)
+// }
 
 fn parse_block(block: &ASTBlock, switch_map: HashMap<String, SwitchMetadata>) -> Vec<TInstruction> {
     let function_body: Vec<TInstruction> = block
@@ -292,7 +292,7 @@ fn parse_declaration(declaration: &ASTDeclaration) -> Vec<TInstruction> {
 fn parse_variable_declaration(variable_declaration: &ASTVariableDeclaration) -> Vec<TInstruction> {
     let mut instructions = Vec::new();
 
-    if let Some(init_unwrapped) = variable_declaration.init.as_ref() {
+    if variable_declaration.storage_class.is_none() && let Some(init_unwrapped) = variable_declaration.init.as_ref() {
         let result = emit_tacky(init_unwrapped, &mut instructions);
         instructions.push(TInstruction::Copy { src: result, dst: TValue::Var(variable_declaration.name.clone())});
     }

@@ -80,7 +80,7 @@ fn main() {
         let program_loops_labelled = label_program(program_resolved);
         let symbols = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
-        let tacky = parse_tacky(program_loops_labelled, symbols, switch_map);
+        let tacky = parse_tacky(program_loops_labelled, &symbols, switch_map);
         println!("{:?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
@@ -89,9 +89,9 @@ fn main() {
         let program_loops_labelled = label_program(program_resolved);
         let symbols = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_loops_labelled.clone());
-        let tacky = parse_tacky(program_loops_labelled, symbols, switch_map);
+        let tacky = parse_tacky(program_loops_labelled, &symbols, switch_map);
         let assembly = generate_assembly(tacky);
-        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &symbols);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
         println!("{:#?}", assembly_mov_fixed);
     } else {
@@ -110,12 +110,12 @@ fn main() {
         println!("Switch map:");
         println!("{:#?}", switch_map);
 
-        let tacky = parse_tacky(program_loops_labelled, symbols.clone(), switch_map);
+        let tacky = parse_tacky(program_loops_labelled, &symbols, switch_map);
         println!("Tacky:");
         println!("{}", print_tacky(&tacky));
 
         let assembly = generate_assembly(tacky);
-        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &symbols);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
         let code = generate_code(assembly_mov_fixed, &symbols);
         println!("Assembly:");
