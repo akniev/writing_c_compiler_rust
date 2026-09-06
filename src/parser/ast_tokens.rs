@@ -4,8 +4,11 @@ program = Program(declaration*)
 block_item = S(statement) | D(declaration)
 block = Block(block_item*)
 declaration = FunDecl(function_declaration) | VarDecl(variable_declaration)
-variable_declaration = (identifier name, exp? init, storage_class?)
-function_declaration = (identifier name, identifier* params, block? body, storage_class?)
+variable_declaration = (identifier name, exp? init,
+                        type var_type, storage_class?)
+function_declaration = (identifier name, identifier* params, block? body,
+                        type fun_type, storage_class?)
+type = Int | Long | FunType(type* params, type ret)
 storage_class = Static | Extern
 for_init = InitDecl(variable_declaration) | InitExp(exp?)
 statement = Return(exp)
@@ -23,8 +26,9 @@ statement = Return(exp)
           | LabelledStatement(identifier label, statement)
           | Goto(identifier label)
           | Null
-exp = Constant(int)
+exp = Constant(const)
     | Var(identifier)
+    | Cast(type target_type, exp)
     | Unary(unary_operator, exp)
     | Binary(binary_operator, exp, exp)
     | Assignment(exp, exp)
@@ -33,7 +37,11 @@ exp = Constant(int)
     | Conditional(exp condition, exp, exp)
     | FunctionCall(identifier, exp* args)
 unary_operator = Complement | Negate | Not
-binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | And | Or | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
+binary_operator = Add | Subtract | Multiply | Divide | Remainder
+                | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft
+                | ShiftRight | And | Or | Equal | NotEqual | LessThan
+                | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
+const = ConstInt(int) | ConstLong(int)
  */
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +54,7 @@ pub struct ASTFunctionDeclaration {
     pub name: String,
     pub params: Vec<String>,
     pub body: Option<ASTBlock>,
+    pub _type: ASTType,
     pub storage_class: Option<ASTStorageClass>,
 }
 
@@ -53,7 +62,15 @@ pub struct ASTFunctionDeclaration {
 pub struct ASTVariableDeclaration {
     pub name: String,
     pub init: Option<ASTExpression>,
+    pub _type: ASTType,
     pub storage_class: Option<ASTStorageClass>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASTType {
+    Int,
+    Long,
+    FunType(Vec<Box<ASTType>>, Box<ASTType>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -112,8 +129,9 @@ pub enum ASTDeclaration {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASTExpression {
+    Constant(ASTConstant),
     Var(String),
-    Constant(i32),
+    Cast { target_type: ASTType, exp: Box<ASTExpression> },
     Unary { op: ASTUnaryOperator, exp: Box<ASTExpression> },
     Postfix { op: ASTPostfixOperator, exp: Box<ASTExpression> },
     Binary { op: ASTBinaryOperator, lhs: Box<ASTExpression>, rhs: Box<ASTExpression> },
@@ -121,6 +139,12 @@ pub enum ASTExpression {
     CompoundAssignment { lhs: Box<ASTExpression>, rhs: Box<ASTExpression>, operator: ASTBinaryOperator },
     Conditional { condition: Box<ASTExpression>, if_true: Box<ASTExpression>, if_false: Box<ASTExpression> },
     FunctionCall { name: String, args: Vec<ASTExpression> },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ASTConstant {
+    Int(i64),
+    Long(i64),
 }
 
 #[derive(Debug, Clone, PartialEq)]

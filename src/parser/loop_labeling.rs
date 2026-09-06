@@ -42,13 +42,14 @@ fn label_declaration(declaration: ASTDeclaration, label_context: &mut LabelConte
 }
 
 fn label_function(function: ASTFunctionDeclaration, label_context: &mut LabelContext) -> ASTFunctionDeclaration {
-    let new_body = function.body.map(|b|label_block(b, label_context));
-    ASTFunctionDeclaration {
-        name: function.name,
-        params: function.params,
-        body: new_body,
-        storage_class: function.storage_class,
-    }
+    panic!("Temporarily disabled");
+    // let new_body = function.body.map(|b|label_block(b, label_context));
+    // ASTFunctionDeclaration {
+    //     name: function.name,
+    //     params: function.params,
+    //     body: new_body,
+    //     storage_class: function.storage_class,
+    // }
 }
 
 fn label_block(block: ASTBlock, label_context: &mut LabelContext) -> ASTBlock {

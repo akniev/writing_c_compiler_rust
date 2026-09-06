@@ -4,7 +4,9 @@ use regex::Regex;
 pub enum LexerToken {
     Identifier(String),
     Const(i32),
+    LongConst(i64),
     Int,
+    Long,
     Void,
     Return,
     OpenParen,
@@ -73,7 +75,9 @@ pub enum LexerToken {
 pub enum LexerTokenKind {
     Identifier,
     Const,
+    LongConst,
     Int,
+    Long,
     Void,
     Return,
     OpenParen,
@@ -143,7 +147,9 @@ impl LexerToken {
         match self {
             LexerToken::Identifier(_) => LexerTokenKind::Identifier,
             LexerToken::Const(_) => LexerTokenKind::Const,
+            LexerToken::LongConst(_) => LexerTokenKind::LongConst,
             LexerToken::Int => LexerTokenKind::Int,
+            LexerToken::Long => LexerTokenKind::Long,
             LexerToken::Void => LexerTokenKind::Void,
             LexerToken::Return => LexerTokenKind::Return,
             LexerToken::OpenParen => LexerTokenKind::OpenParen,
@@ -215,7 +221,9 @@ impl LexerTokenKind {
         Regex::new(match self {
             Self::Identifier => r"^[a-zA-Z_]\w*\b",
             Self::Const => r"^[0-9]+\b",
+            Self::LongConst => r"^[0-9]+[lL]\b",
             Self::Int => r"^int\b",
+            Self::Long => r"^long\b",
             Self::Void => r"^void\b",
             Self::Return => r"^return\b",
             Self::OpenParen => r"^\(",
@@ -284,8 +292,17 @@ impl LexerTokenKind {
     pub fn token(&self, text: &str) -> LexerToken {
         match self {
             LexerTokenKind::Identifier => LexerToken::Identifier(text.to_string()),
-            LexerTokenKind::Const => LexerToken::Const(text.parse().unwrap()),
+            LexerTokenKind::Const => {
+                let number = text.parse::<i64>().unwrap();
+                if number > 2^31 - 1 || number < -2^31 {
+                    LexerToken::LongConst(number)
+                } else {
+                    LexerToken::Const(number as i32)
+                }
+            },
+            LexerTokenKind::LongConst => LexerToken::LongConst(text.trim_end_matches(['l', 'L']).parse().unwrap()),
             LexerTokenKind::Int => LexerToken::Int,
+            LexerTokenKind::Long => LexerToken::Long,
             LexerTokenKind::Void => LexerToken::Void,
             LexerTokenKind::Return => LexerToken::Return,
             LexerTokenKind::OpenParen => LexerToken::OpenParen,
@@ -355,7 +372,9 @@ impl LexerTokenKind {
 pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::Identifier,
     LexerTokenKind::Const,
+    LexerTokenKind::LongConst,
     LexerTokenKind::Int,
+    LexerTokenKind::Long,
     LexerTokenKind::Void,
     LexerTokenKind::Return,
     LexerTokenKind::OpenParen,

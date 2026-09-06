@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTConstant, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SwitchMetadata {
-    pub(crate) cases: Vec<(i32, String)>, // values and labels
+    pub(crate) cases: Vec<(i64, String)>, // values and labels
     pub(crate) default: Option<String>, // label of default case
 }
 
@@ -82,8 +82,11 @@ fn parse_statement(statement: ASTStatement, switch_label: Option<String>, switch
             let Some(switch_label) = switch_label else {
                 panic!("Case statement outside of switch");
             };
-            let ASTExpression::Constant(case_val) = value else {
+            let ASTExpression::Constant(ast_const) = value else {
                 panic!("Case value is not a constant");
+            };
+            let case_val = match ast_const {
+                ASTConstant::Int(val) | ASTConstant::Long(val) => val
             };
             let switch_metadata = switch_map.get_mut(&switch_label).unwrap();
             if switch_metadata.cases.iter().map(|case| case.0).any(|x| x == case_val) {

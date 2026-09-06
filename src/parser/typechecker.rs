@@ -70,111 +70,113 @@ fn typecheck_local_variable_declaration(
     variable_declaration: &ASTVariableDeclaration,
     symbols: &mut HashMap<String, Symbol>
 ) {
-    if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-        if variable_declaration.init.is_some() {
-            panic!("Initializer on local extern variable declaration");
-        }
-        if symbols.contains_key(&variable_declaration.name.clone()) {
-            let old_decl = symbols.get(&variable_declaration.name).unwrap();
-            if old_decl._type != SymbolType::Int {
-                panic!("Function redeclared as variable");
-            }
-        } else {
-            symbols.insert(
-                variable_declaration.name.clone(),
-                Symbol {
-                    name: variable_declaration.name.clone(),
-                    _type: SymbolType::Int,
-                    identifier_attrs: SymbolAttrs::StaticAttr {
-                        init: SymbolInitialValue::NoInitializer,
-                        global: true
-                    }
-                }
-            );
-        }
-    } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
-        let initial_value = if let Some(ASTExpression::Constant(init_val)) = variable_declaration.init {
-            SymbolInitialValue::Initial(init_val)
-        } else if variable_declaration.init.is_none() {
-            SymbolInitialValue::Initial(0)
-        } else {
-            panic!("Non-constant initializer on local static variable")
-        };
-        symbols.insert(
-            variable_declaration.name.clone(),
-            Symbol {
-                name: variable_declaration.name.clone(),
-                _type: SymbolType::Int,
-                identifier_attrs: SymbolAttrs::StaticAttr { init: initial_value, global: false }
-            }
-        );
-    } else {
-        symbols
-            .insert(
-                variable_declaration.clone().name,
-                Symbol {
-                    name: variable_declaration.name.clone(),
-                    _type: SymbolType::Int,
-                    identifier_attrs: SymbolAttrs::LocalAttr
-                }
-            );
-        if let Some(init) = variable_declaration.clone().init {
-            typecheck_expression(init, symbols);
-        }
-    }
+    panic!("Temporarily disabled");
+    // if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //     if variable_declaration.init.is_some() {
+    //         panic!("Initializer on local extern variable declaration");
+    //     }
+    //     if symbols.contains_key(&variable_declaration.name.clone()) {
+    //         let old_decl = symbols.get(&variable_declaration.name).unwrap();
+    //         if old_decl._type != SymbolType::Int {
+    //             panic!("Function redeclared as variable");
+    //         }
+    //     } else {
+    //         symbols.insert(
+    //             variable_declaration.name.clone(),
+    //             Symbol {
+    //                 name: variable_declaration.name.clone(),
+    //                 _type: SymbolType::Int,
+    //                 identifier_attrs: SymbolAttrs::StaticAttr {
+    //                     init: SymbolInitialValue::NoInitializer,
+    //                     global: true
+    //                 }
+    //             }
+    //         );
+    //     }
+    // } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
+    //     let initial_value = if let Some(ASTExpression::Constant(init_val)) = variable_declaration.init {
+    //         SymbolInitialValue::Initial(init_val)
+    //     } else if variable_declaration.init.is_none() {
+    //         SymbolInitialValue::Initial(0)
+    //     } else {
+    //         panic!("Non-constant initializer on local static variable")
+    //     };
+    //     symbols.insert(
+    //         variable_declaration.name.clone(),
+    //         Symbol {
+    //             name: variable_declaration.name.clone(),
+    //             _type: SymbolType::Int,
+    //             identifier_attrs: SymbolAttrs::StaticAttr { init: initial_value, global: false }
+    //         }
+    //     );
+    // } else {
+    //     symbols
+    //         .insert(
+    //             variable_declaration.clone().name,
+    //             Symbol {
+    //                 name: variable_declaration.name.clone(),
+    //                 _type: SymbolType::Int,
+    //                 identifier_attrs: SymbolAttrs::LocalAttr
+    //             }
+    //         );
+    //     if let Some(init) = variable_declaration.clone().init {
+    //         typecheck_expression(init, symbols);
+    //     }
+    // }
 }
 
 fn typecheck_file_scope_variable_declaration(
     variable_declaration: &ASTVariableDeclaration,
     symbols: &mut HashMap<String, Symbol>
 ) {
-    let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.init {
-        SymbolInitialValue::Initial(init_value)
-    } else if variable_declaration.init.is_none() {
-        if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-            SymbolInitialValue::NoInitializer
-        } else {
-            SymbolInitialValue::Tentative
-        }
-    } else {
-        panic!("Non-constant initializer!")
-    };
-
-    let mut global = variable_declaration.storage_class != Some(ASTStorageClass::Static);
-
-    if symbols.contains_key(&variable_declaration.name) {
-        let old_decl = symbols.get(&variable_declaration.name).unwrap();
-        if old_decl._type != SymbolType::Int {
-            panic!("Function redeclared as variable");
-        }
-        if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-            global = old_decl.identifier_attrs.is_global();
-        } else if old_decl.identifier_attrs.is_global() != global {
-            panic!("Conflicting variable linkage")
-        }
-
-        let old_init = old_decl.identifier_attrs.get_init();
-
-        if matches!(old_init, Some(SymbolInitialValue::Initial(_))) {
-            if matches!(initial_value, SymbolInitialValue::Initial(_)) {
-                panic!("Conflicting file scope variable definitions");
-            } else {
-                initial_value = old_init.unwrap();
-            }
-        } else if !matches!(initial_value, SymbolInitialValue::Initial(_)) && matches!(old_init, Some(SymbolInitialValue::Tentative)) {
-            initial_value = SymbolInitialValue::Tentative;
-        }
-    }
-
-    let attrs = SymbolAttrs::StaticAttr { init: initial_value, global };
-    symbols.insert(
-        variable_declaration.name.clone(),
-        Symbol {
-            name: variable_declaration.name.clone(),
-            _type: SymbolType::Int,
-            identifier_attrs: attrs
-        }
-    );
+    panic!("Temporarily disabled");
+    // let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.init {
+    //     SymbolInitialValue::Initial(init_value)
+    // } else if variable_declaration.init.is_none() {
+    //     if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //         SymbolInitialValue::NoInitializer
+    //     } else {
+    //         SymbolInitialValue::Tentative
+    //     }
+    // } else {
+    //     panic!("Non-constant initializer!")
+    // };
+    //
+    // let mut global = variable_declaration.storage_class != Some(ASTStorageClass::Static);
+    //
+    // if symbols.contains_key(&variable_declaration.name) {
+    //     let old_decl = symbols.get(&variable_declaration.name).unwrap();
+    //     if old_decl._type != SymbolType::Int {
+    //         panic!("Function redeclared as variable");
+    //     }
+    //     if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //         global = old_decl.identifier_attrs.is_global();
+    //     } else if old_decl.identifier_attrs.is_global() != global {
+    //         panic!("Conflicting variable linkage")
+    //     }
+    //
+    //     let old_init = old_decl.identifier_attrs.get_init();
+    //
+    //     if matches!(old_init, Some(SymbolInitialValue::Initial(_))) {
+    //         if matches!(initial_value, SymbolInitialValue::Initial(_)) {
+    //             panic!("Conflicting file scope variable definitions");
+    //         } else {
+    //             initial_value = old_init.unwrap();
+    //         }
+    //     } else if !matches!(initial_value, SymbolInitialValue::Initial(_)) && matches!(old_init, Some(SymbolInitialValue::Tentative)) {
+    //         initial_value = SymbolInitialValue::Tentative;
+    //     }
+    // }
+    //
+    // let attrs = SymbolAttrs::StaticAttr { init: initial_value, global };
+    // symbols.insert(
+    //     variable_declaration.name.clone(),
+    //     Symbol {
+    //         name: variable_declaration.name.clone(),
+    //         _type: SymbolType::Int,
+    //         identifier_attrs: attrs
+    //     }
+    // );
 }
 
 fn typecheck_block(block: ASTBlock, symbols: &mut HashMap<String, Symbol>) {
@@ -259,52 +261,53 @@ fn typecheck_statement(statement: ASTStatement, symbols: &mut HashMap<String, Sy
 }
 
 fn typecheck_expression(expression: ASTExpression, symbols: &mut HashMap<String, Symbol>) {
-    match expression {
-        ASTExpression::Var(name) => {
-            if symbols.get(&name).unwrap()._type != SymbolType::Int {
-                panic!("{} is not an integer", name);
-            }
-        }
-        ASTExpression::Constant(_) => {
-            // Do nothing
-        }
-        ASTExpression::Unary { op: _, exp } => {
-            typecheck_expression(exp.as_ref().clone(), symbols);
-        }
-        ASTExpression::Postfix { op: _, exp } => {
-            typecheck_expression(exp.as_ref().clone(), symbols);
-        }
-        ASTExpression::Binary { op: _, lhs, rhs } => {
-            typecheck_expression(lhs.as_ref().clone(), symbols);
-            typecheck_expression(rhs.as_ref().clone(), symbols);
-        }
-        ASTExpression::Assignment { lhs, rhs } => {
-            typecheck_expression(lhs.as_ref().clone(), symbols);
-            typecheck_expression(rhs.as_ref().clone(), symbols);
-        }
-        ASTExpression::CompoundAssignment { lhs, rhs, operator: _ } => {
-            typecheck_expression(lhs.as_ref().clone(), symbols);
-            typecheck_expression(rhs.as_ref().clone(), symbols);
-        }
-        ASTExpression::Conditional { condition, if_true, if_false } => {
-            typecheck_expression(condition.as_ref().clone(), symbols);
-            typecheck_expression(if_true.as_ref().clone(), symbols);
-            typecheck_expression(if_false.as_ref().clone(), symbols);
-        }
-        ASTExpression::FunctionCall { name, args } => {
-            let f_type = symbols.get(&name).unwrap().clone()._type;
-            if f_type == SymbolType::Int {
-                panic!("{} is not a function", name);
-            }
-            if let SymbolType::FunType(param_count) = f_type && param_count != args.len() as i32 {
-                panic!("{} expects {} arguments, got {}", name, param_count, args.len());
-            }
-            for arg in args {
-                typecheck_expression(arg, symbols);
-            }
-        }
-
-    }
+    panic!("Temporarily disabled");
+    // match expression {
+    //     ASTExpression::Var(name) => {
+    //         if symbols.get(&name).unwrap()._type != SymbolType::Int {
+    //             panic!("{} is not an integer", name);
+    //         }
+    //     }
+    //     ASTExpression::Constant(_) => {
+    //         // Do nothing
+    //     }
+    //     ASTExpression::Unary { op: _, exp } => {
+    //         typecheck_expression(exp.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::Postfix { op: _, exp } => {
+    //         typecheck_expression(exp.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::Binary { op: _, lhs, rhs } => {
+    //         typecheck_expression(lhs.as_ref().clone(), symbols);
+    //         typecheck_expression(rhs.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::Assignment { lhs, rhs } => {
+    //         typecheck_expression(lhs.as_ref().clone(), symbols);
+    //         typecheck_expression(rhs.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::CompoundAssignment { lhs, rhs, operator: _ } => {
+    //         typecheck_expression(lhs.as_ref().clone(), symbols);
+    //         typecheck_expression(rhs.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::Conditional { condition, if_true, if_false } => {
+    //         typecheck_expression(condition.as_ref().clone(), symbols);
+    //         typecheck_expression(if_true.as_ref().clone(), symbols);
+    //         typecheck_expression(if_false.as_ref().clone(), symbols);
+    //     }
+    //     ASTExpression::FunctionCall { name, args } => {
+    //         let f_type = symbols.get(&name).unwrap().clone()._type;
+    //         if f_type == SymbolType::Int {
+    //             panic!("{} is not a function", name);
+    //         }
+    //         if let SymbolType::FunType(param_count) = f_type && param_count != args.len() as i32 {
+    //             panic!("{} expects {} arguments, got {}", name, param_count, args.len());
+    //         }
+    //         for arg in args {
+    //             typecheck_expression(arg, symbols);
+    //         }
+    //     }
+    //
+    // }
 }
 
 
