@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::assembly::assembly_tokens::{ASMCondCode, ASMInstruction, ASMProgram, ASMRegSize, ASMTopLevel};
-use crate::parser::typechecker::{Symbol, SymbolType};
+use crate::parser::ast_tokens::ASTType;
+use crate::parser::typechecker::{Symbol};
 
 pub fn generate_code(asm: ASMProgram, symbols: &HashMap<String, Symbol>) -> String {
     let mut result = String::new();
@@ -79,7 +80,7 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
             let Some(symbol) = symbols.get(&identifier) else {
                 panic!("Symbol {} not found", identifier);
             };
-            if !matches!(symbol._type, SymbolType::FunType(_)) {
+            if !matches!(symbol._type, ASTType::FunType(_, _)) {
                 panic!("{} is not a function", identifier);
             }
             if symbol.identifier_attrs.is_defined() {

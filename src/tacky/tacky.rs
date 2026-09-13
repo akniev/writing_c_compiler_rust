@@ -34,26 +34,28 @@ pub fn parse_tacky(
 }
 
 fn convert_symbols_to_tacky(symbols: &HashMap<String, Symbol>) -> Vec<TTopLevel> {
-    let mut static_vars = vec![];
-
-    for (symbol_name, symbol) in symbols {
-        match symbol.clone().identifier_attrs {
-            SymbolAttrs::StaticAttr { init, global } => {
-                match init {
-                    SymbolInitialValue::Initial(i) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: i.clone() }),
-                    SymbolInitialValue::Tentative => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: 0 } ),
-                    SymbolInitialValue::NoInitializer => {
-                        // Do nothing
-                    }
-                }
-            }
-            _ => {
-                // Do nothing
-            }
-        }
-    }
-
-    static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
+    panic!("Temporarily disabled");
+    // let mut static_vars = vec![];
+    //
+    // for (symbol_name, symbol) in symbols {
+    //     match symbol.clone().identifier_attrs {
+    //         SymbolAttrs::StaticAttr { init, global } => {
+    //             match init {
+    //                 SymbolInitialValue::Initial(i) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: i.clone() }),
+    //                 SymbolInitialValue::InitialLong(i) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: i.clone() }),
+    //                 SymbolInitialValue::Tentative => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: 0 } ),
+    //                 SymbolInitialValue::NoInitializer => {
+    //                     // Do nothing
+    //                 }
+    //             }
+    //         }
+    //         _ => {
+    //             // Do nothing
+    //         }
+    //     }
+    // }
+    //
+    // static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
 }
 
 fn parse_function(
@@ -258,21 +260,22 @@ fn parse_statement(statement: &ASTStatement, switch_map: HashMap<String, SwitchM
 }
 
 fn parse_forinit(init: &ASTForInit) -> Vec<TInstruction> {
-    let mut instructions = Vec::new();
-
-    match init {
-        ASTForInit::InitDecl(declaration) => {
-            instructions.extend(parse_variable_declaration(declaration));
-        }
-        ASTForInit::InitExp(Some(exp)) => {
-            emit_tacky(exp, &mut instructions);
-        }
-        ASTForInit::InitExp(None) => {
-            // Do nothing
-        }
-    }
-
-    instructions
+    panic!("Temporarily disabled");
+    // let mut instructions = Vec::new();
+    //
+    // match init {
+    //     ASTForInit::InitDecl(declaration) => {
+    //         instructions.extend(parse_variable_declaration(declaration));
+    //     }
+    //     ASTForInit::InitExp(Some(exp)) => {
+    //         emit_tacky(exp, &mut instructions);
+    //     }
+    //     ASTForInit::InitExp(None) => {
+    //         // Do nothing
+    //     }
+    // }
+    //
+    // instructions
 }
 
 fn parse_declaration(declaration: &ASTDeclaration) -> Vec<TInstruction> {
@@ -291,14 +294,15 @@ fn parse_declaration(declaration: &ASTDeclaration) -> Vec<TInstruction> {
 }
 
 fn parse_variable_declaration(variable_declaration: &ASTVariableDeclaration) -> Vec<TInstruction> {
-    let mut instructions = Vec::new();
-
-    if variable_declaration.storage_class.is_none() && let Some(init_unwrapped) = variable_declaration.init.as_ref() {
-        let result = emit_tacky(init_unwrapped, &mut instructions);
-        instructions.push(TInstruction::Copy { src: result, dst: TValue::Var(variable_declaration.name.clone())});
-    }
-
-    instructions
+    panic!("Temporarily disabled");
+    // let mut instructions = Vec::new();
+    //
+    // if variable_declaration.storage_class.is_none() && let Some(init_unwrapped) = variable_declaration.init.as_ref() {
+    //     let result = emit_tacky(init_unwrapped, &mut instructions);
+    //     instructions.push(TInstruction::Copy { src: result, dst: TValue::Var(variable_declaration.name.clone())});
+    // }
+    //
+    // instructions
 }
 
 fn emit_tacky(exp: &ASTExpression, instructions: &mut Vec<TInstruction>) -> TValue {

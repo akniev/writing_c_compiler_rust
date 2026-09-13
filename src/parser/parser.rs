@@ -1,5 +1,5 @@
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
-use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass, ASTType, ASTConstant};
+use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass, ASTType, ASTConstant, ASTTypedExpression};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
 /*
 <program> ::= { <declaration> }
@@ -385,7 +385,7 @@ impl Parser {
         }
     }
 
-    fn parse_optional_expression(&mut self, min_prec: i32, terminator: LexerTokenKind) -> Option<ASTExpression> {
+    fn parse_optional_expression(&mut self, min_prec: i32, terminator: LexerTokenKind) -> Option<ASTTypedExpression> {
         let next_token = self.peek();
         match next_token {
             Some(token) => {
@@ -401,7 +401,7 @@ impl Parser {
         Some(self.parse_expression(min_prec))
     }
 
-    fn parse_expression(&mut self, min_prec: i32) -> ASTExpression {
+    fn parse_expression(&mut self, min_prec: i32) -> ASTTypedExpression {
         let mut lhs = self.parse_factor();
         let mut next_token = self.peek();
         while Self::is_binary_op(&next_token) && Self::precedence(&next_token) >= min_prec {
@@ -409,7 +409,10 @@ impl Parser {
                 Some(LexerToken::EqualSign) => { // Assignment
                     self.take();
                     let rhs = self.parse_expression(Self::precedence(&next_token));
-                    lhs = ASTExpression::Assignment { lhs: Box::new(lhs), rhs: Box::new(rhs) };
+                    lhs = ASTExpression::Assignment {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs)
+                    }.to_typed_without_type();
                 }
                 Some(LexerToken::PlusEqual |
                      LexerToken::MinusEqual |
@@ -423,17 +426,28 @@ impl Parser {
                      LexerToken::RightShiftEqual) => {
                     let operator = self.parse_binop();
                     let rhs = self.parse_expression(Self::precedence(&next_token));
-                    lhs = ASTExpression::CompoundAssignment { lhs: Box::new(lhs), rhs: Box::new(rhs), operator };
+                    lhs = ASTExpression::CompoundAssignment {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs), operator
+                    }.to_typed_without_type();
                 }
                 Some(LexerToken::QuestionMark) => {
                     let middle = self.parse_conditional_middle();
                     let rhs = self.parse_expression(Self::precedence(&next_token));
-                    lhs = Conditional { condition: Box::new(lhs), if_true: Box::new(middle), if_false: Box::new(rhs) };
+                    lhs = Conditional {
+                        condition: Box::new(lhs),
+                        if_true: Box::new(middle),
+                        if_false: Box::new(rhs)
+                    }.to_typed_without_type();
                 }
                 _ => {
                     let operator = self.parse_binop();
                     let rhs = self.parse_expression(Self::precedence(&next_token) + 1);
-                    lhs = ASTExpression::Binary { op: operator, lhs: Box::new(lhs), rhs: Box::new(rhs) };
+                    lhs = ASTExpression::Binary {
+                        op: operator,
+                        e1: Box::new(lhs),
+                        e2: Box::new(rhs)
+                    }.to_typed_without_type();
                 }
             }
 
@@ -443,9 +457,9 @@ impl Parser {
         lhs
     }
 
-    fn parse_factor(&mut self) -> ASTExpression {
+    fn parse_factor(&mut self) -> ASTTypedExpression {
         let next_token = self.peek().unwrap();
-        let mut result: ASTExpression;
+        let mut result: ASTTypedExpression;
         match next_token {
             LexerToken::Const(_) => {
                 let const_token = self.expect(LexerTokenKind::Const);
@@ -453,7 +467,7 @@ impl Parser {
                     LexerToken::Const(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::Int(value as i64));
+                result = ASTExpression::Constant(ASTConstant::Int(value as i64)).to_typed_without_type();
             }
             LexerToken::LongConst(_) => {
                 let const_token = self.expect(LexerTokenKind::LongConst);
@@ -461,7 +475,7 @@ impl Parser {
                     LexerToken::LongConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::Long(value));
+                result = ASTExpression::Constant(ASTConstant::Long(value)).to_typed_without_type();
             }
             LexerToken::Identifier(_) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
                 let function_call = self.parse_function_call();
@@ -469,19 +483,19 @@ impl Parser {
             }
             LexerToken::Identifier(name) => {
                 self.take();
-                result = ASTExpression::Var(name.to_string());
+                result = ASTExpression::Var(name.to_string()).to_typed_without_type();
             }
             LexerToken::Tilde | LexerToken::Hyphen | LexerToken::ExclamationMark | LexerToken::Increment | LexerToken::Decrement => {
                 let operator = self.parse_unop();
                 let inner_exp = self.parse_factor();
-                result = ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) };
+                result = ASTExpression::Unary { op: operator, exp: Box::new(inner_exp) }.to_typed_without_type();
             }
             LexerToken::OpenParen if self.peek_n(1).unwrap().kind().is_type_token() => {
                 self.take();
                 let _type = self.parse_type();
                 self.expect(LexerTokenKind::CloseParen);
                 let factor = self.parse_factor();
-                result = ASTExpression::Cast { target_type: _type, exp: Box::new(factor) };
+                result = ASTExpression::Cast { target_type: _type, exp: Box::new(factor) }.to_typed_without_type();
             }
             LexerToken::OpenParen => {
                 self.take();
@@ -496,20 +510,20 @@ impl Parser {
 
         if self.peek() == Some(LexerToken::Increment) || self.peek() == Some(LexerToken::Decrement) {
             let postfix_operator = self.parse_postfix();
-            result = ASTExpression::Postfix { exp: Box::new(result.clone()), op: postfix_operator };
+            result = ASTExpression::Postfix { exp: Box::new(result.clone()), op: postfix_operator }.to_typed_without_type();
         }
 
         result
     }
 
-    fn parse_function_call(&mut self) -> ASTExpression {
+    fn parse_function_call(&mut self) -> ASTTypedExpression {
         let LexerToken::Identifier(name) = self.expect(LexerTokenKind::Identifier) else {
             panic!("expected identifier");
         };
 
         self.expect(LexerTokenKind::OpenParen);
 
-        let mut args: Vec<ASTExpression> = Vec::new();
+        let mut args: Vec<ASTTypedExpression> = Vec::new();
 
         if self.peek() != Some(LexerToken::CloseParen) {
             let arg1 = self.parse_expression(0);
@@ -523,7 +537,9 @@ impl Parser {
         }
 
         self.expect(LexerTokenKind::CloseParen);
-        ASTExpression::FunctionCall { name, args }
+        let result = ASTExpression::FunctionCall { name, args };
+        let typed_result = ASTTypedExpression { exp: result, exp_type: None };
+        typed_result
     }
 
     fn precedence(token: &Option<LexerToken>) -> i32 {
@@ -656,7 +672,7 @@ impl Parser {
         }
     }
 
-    fn parse_conditional_middle(&mut self) -> ASTExpression {
+    fn parse_conditional_middle(&mut self) -> ASTTypedExpression {
         self.expect(LexerTokenKind::QuestionMark);
         let middle = self.parse_expression(0);
         self.expect(LexerTokenKind::Colon);
@@ -709,5 +725,32 @@ impl LexerTokenKind {
             LexerTokenKind::Static | LexerTokenKind::Extern => true,
             _ => false,
         }
+    }
+}
+
+impl ASTExpression {
+    pub fn to_typed_without_type(self) -> ASTTypedExpression {
+        ASTTypedExpression { exp: self, exp_type: None }
+    }
+
+    pub fn to_typed(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
+        ASTTypedExpression {
+            exp: self.clone(),
+            exp_type,
+        }
+    }
+}
+
+impl ASTTypedExpression {
+    pub fn exp(&self) -> &ASTExpression {
+        &self.exp
+    }
+
+    pub fn exp_type(&self) -> Option<&ASTType> {
+        self.exp_type.as_ref()
+    }
+
+    pub fn with_type(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
+        ASTTypedExpression { exp: self.exp.clone(), exp_type }
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::common::global_counter::get_unique_label;
-use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass};
+use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass, ASTTypedExpression};
 use crate::parser::label_resolution::get_labels;
 
 pub fn resolve_identifiers(program: ASTProgram) -> ASTProgram {
@@ -172,93 +172,116 @@ fn resolve_declaration(
     resolve_context: &mut ResolveContext,
     file_scope: bool,
 ) -> ASTDeclaration {
-    panic!("Temporarily disabled");
-    // match declaration {
-    //     ASTDeclaration::VariableDeclaration(variable_declaration) => {
-    //         let variable_declaration = if file_scope {
-    //             resolve_file_scope_variable_declaration(variable_declaration, resolve_context)
-    //         } else {
-    //             resolve_block_scope_variable_declaration(variable_declaration, resolve_context)
-    //         };
-    //         ASTDeclaration::VariableDeclaration(variable_declaration)
-    //     }
-    //     ASTDeclaration::FunctionDeclaration(function_declaration) => {
-    //         let ASTFunctionDeclaration { name, params: _, body, storage_class } = function_declaration.clone();
-    //         if !file_scope && body != None {
-    //             panic!("Nested function definitions are not allowed");
-    //         }
-    //         if !file_scope && storage_class == Some(ASTStorageClass::Static) {
-    //             panic!("Static functions are not allowed in block scope");
-    //         }
-    //
-    //         resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
-    //         let function_declaration = resolve_function_declaration(function_declaration, resolve_context);
-    //         ASTDeclaration::FunctionDeclaration(function_declaration)
-    //     }
-    // }
+    match declaration {
+        ASTDeclaration::VariableDeclaration(variable_declaration) => {
+            let variable_declaration = if file_scope {
+                resolve_file_scope_variable_declaration(variable_declaration, resolve_context)
+            } else {
+                resolve_block_scope_variable_declaration(variable_declaration, resolve_context)
+            };
+            ASTDeclaration::VariableDeclaration(variable_declaration)
+        }
+        ASTDeclaration::FunctionDeclaration(function_declaration) => {
+            let ASTFunctionDeclaration {
+                name,
+                params: _,
+                body,
+                _type: _,
+                storage_class
+            } = function_declaration.clone();
+            if !file_scope && body != None {
+                panic!("Nested function definitions are not allowed");
+            }
+            if !file_scope && storage_class == Some(ASTStorageClass::Static) {
+                panic!("Static functions are not allowed in block scope");
+            }
+
+            resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
+            let function_declaration = resolve_function_declaration(function_declaration, resolve_context);
+            ASTDeclaration::FunctionDeclaration(function_declaration)
+        }
+    }
 }
 
 fn resolve_block_scope_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
-    panic!("Temporarily disabled");
-    // let ASTVariableDeclaration { name, init, storage_class } = variable_declaration;
-    // if resolve_context.identifier_map.contains_key(&name) {
-    //     let prev_entry = resolve_context.identifier_map.get(&name).unwrap();
-    //     if prev_entry.from_current_scope {
-    //         if !(prev_entry.has_external_linkage &&  storage_class == Some(ASTStorageClass::Extern)) {
-    //             panic!("Conflicting local declaration!");
-    //         }
-    //     }
-    // }
-    //
-    // if storage_class == Some(ASTStorageClass::Extern) {
-    //     resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
-    //     ASTVariableDeclaration { name, init, storage_class }
-    // } else {
-    //     let unique_name = get_unique_label(&name);
-    //     resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
-    //     let new_init = init.map(|init| resolve_expression(init, resolve_context));
-    //     ASTVariableDeclaration { name: unique_name, init: new_init, storage_class }
-    // }
+    let ASTVariableDeclaration {
+        name,
+        init,
+        _type,
+        storage_class
+    } = variable_declaration;
+    if resolve_context.identifier_map.contains_key(&name) {
+        let prev_entry = resolve_context.identifier_map.get(&name).unwrap();
+        if prev_entry.from_current_scope {
+            if !(prev_entry.has_external_linkage &&  storage_class == Some(ASTStorageClass::Extern)) {
+                panic!("Conflicting local declaration!");
+            }
+        }
+    }
+
+    if storage_class == Some(ASTStorageClass::Extern) {
+        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
+        ASTVariableDeclaration { name, init, _type, storage_class }
+    } else {
+        let unique_name = get_unique_label(&name);
+        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
+        let new_init = init.map(|init| resolve_expression(init, resolve_context));
+        ASTVariableDeclaration { name: unique_name, init: new_init, _type, storage_class }
+    }
 }
 
-fn resolve_file_scope_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
-    panic!("Temporarily disabled");
-    // let ASTVariableDeclaration { name, init, storage_class } = variable_declaration;
-    // resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
-    // // We don't need to resolve the init expression here, because it has to be a constant at file scope
-    // ASTVariableDeclaration { name, init, storage_class }
+fn resolve_file_scope_variable_declaration(
+    variable_declaration: ASTVariableDeclaration,
+    resolve_context: &mut ResolveContext
+) -> ASTVariableDeclaration {
+    let ASTVariableDeclaration {
+        name,
+        init,
+        _type,
+        storage_class
+    } = variable_declaration;
+    resolve_context.identifier_map.insert(
+        name.clone(),
+        VariableMapEntry {
+            name: name.clone(),
+            has_external_linkage: true,
+            from_current_scope: true
+        }
+    );
+    // We don't need to resolve the init expression here, because it has to be a constant at file scope
+    ASTVariableDeclaration { name, init, _type, storage_class }
 }
 
 fn resolve_function_declaration(
     function_declaration: ASTFunctionDeclaration,
     resolve_context: &mut ResolveContext,
 ) -> ASTFunctionDeclaration {
-    panic!("Temporarily disabled");
-    // let ASTFunctionDeclaration { name, params: _, body: _, storage_class: _ } = function_declaration.clone();
-    // if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
-    //     panic!("Duplicate declaration with different linkage for function {}", name);
-    // }
-    // resolve_context.identifier_map.insert(
-    //     name.clone(),
-    //     VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true }
-    // );
-    //
-    // let mut function_context = resolve_context.clone_for_new_scope();
-    // let labels = get_labels(&function_declaration);
-    // function_context.labels = labels.clone();
-    //
-    // let mut new_params = vec![];
-    // for param in function_declaration.params.clone() {
-    //     let new_param = resolve_param(param, &mut function_context);
-    //     new_params.push(new_param);
-    // }
-    // let new_body = function_declaration.body.map(|b|resolve_block(b, &mut function_context));
-    // ASTFunctionDeclaration {
-    //     name: function_declaration.name,
-    //     params: new_params,
-    //     body: new_body,
-    //     storage_class: function_declaration.storage_class,
-    // }
+    let ASTFunctionDeclaration { name, params: _, body: _, _type, storage_class: _ } = function_declaration.clone();
+    if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
+        panic!("Duplicate declaration with different linkage for function {}", name);
+    }
+    resolve_context.identifier_map.insert(
+        name.clone(),
+        VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true }
+    );
+
+    let mut function_context = resolve_context.clone_for_new_scope();
+    let labels = get_labels(&function_declaration);
+    function_context.labels = labels.clone();
+
+    let mut new_params = vec![];
+    for param in function_declaration.params.clone() {
+        let new_param = resolve_param(param, &mut function_context);
+        new_params.push(new_param);
+    }
+    let new_body = function_declaration.body.map(|b|resolve_block(b, &mut function_context));
+    ASTFunctionDeclaration {
+        name: function_declaration.name,
+        params: new_params,
+        body: new_body,
+        _type,
+        storage_class: function_declaration.storage_class,
+    }
 }
 
 fn resolve_param(param: String, resolve_context: &mut ResolveContext) -> String {
@@ -271,71 +294,99 @@ fn resolve_param(param: String, resolve_context: &mut ResolveContext) -> String 
 }
 
 fn resolve_expression(
-    exp: ASTExpression,
+    typed_exp: ASTTypedExpression,
     resolve_context: &mut ResolveContext,
-) -> ASTExpression {
-    panic!("Temporarily disabled");
-    // match exp {
-    //     ASTExpression::Var(name) => {
-    //         let unique_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
-    //         ASTExpression::Var(unique_name.clone())
-    //     }
-    //     ASTExpression::Constant(int) => {
-    //         ASTExpression::Constant(int)
-    //     }
-    //     ASTExpression::Unary { op, exp } => {
-    //         if matches!(op, ASTUnaryOperator::Increment | ASTUnaryOperator::Decrement) && !matches!(exp.as_ref(), ASTExpression::Var(_)) {
-    //             panic!("lvalue expected for increment/decrement operator");
-    //         }
-    //         let new_exp = resolve_expression(*exp, resolve_context);
-    //         ASTExpression::Unary { op, exp: Box::new(new_exp) }
-    //     }
-    //     ASTExpression::Binary { op, lhs, rhs } => {
-    //         let new_lhs = resolve_expression(*lhs, resolve_context);
-    //         let new_rhs = resolve_expression(*rhs, resolve_context);
-    //         ASTExpression::Binary { op, lhs: Box::new(new_lhs), rhs: Box::new(new_rhs) }
-    //     }
-    //     ASTExpression::Assignment { lhs, rhs } => {
-    //         if !matches!(lhs.as_ref(), ASTExpression::Var(_)) {
-    //             panic!("Left-hand side of assignment must be a variable");
-    //         }
-    //         let new_lhs = resolve_expression(*lhs, resolve_context);
-    //         let new_rhs = resolve_expression(*rhs, resolve_context);
-    //         ASTExpression::Assignment { lhs: Box::new(new_lhs), rhs: Box::new(new_rhs) }
-    //     }
-    //     ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
-    //         if !matches!(lhs.as_ref(), ASTExpression::Var(_)) {
-    //             panic!("Left-hand side of assignment must be a variable");
-    //         }
-    //         let new_lhs = resolve_expression(*lhs, resolve_context);
-    //         let new_rhs = resolve_expression(*rhs, resolve_context);
-    //         ASTExpression::CompoundAssignment { lhs: Box::new(new_lhs), rhs: Box::new(new_rhs), operator }
-    //     }
-    //     ASTExpression::Postfix { op, exp } => {
-    //         if !matches!(exp.as_ref(), ASTExpression::Var(_)) {
-    //             panic!("Postfix operator must be applied to a variable");
-    //         }
-    //         let new_exp = resolve_expression(*exp, resolve_context);
-    //         ASTExpression::Postfix { op, exp: Box::new(new_exp) }
-    //     }
-    //     ASTExpression::Conditional { condition, if_true, if_false } => {
-    //         let new_condition = resolve_expression(*condition, resolve_context);
-    //         let new_if_true = resolve_expression(*if_true, resolve_context);
-    //         let new_if_false = resolve_expression(*if_false, resolve_context);
-    //         ASTExpression::Conditional { condition: Box::new(new_condition), if_true: Box::new(new_if_true), if_false: Box::new(new_if_false) }
-    //     }
-    //     ASTExpression::FunctionCall { name, args } => {
-    //         if resolve_context.identifier_map.contains_key(&name) {
-    //             let new_fun_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
-    //             let mut new_args = vec![];
-    //             for arg in args.clone() {
-    //                 let new_arg = resolve_expression(arg, resolve_context);
-    //                 new_args.push(new_arg);
-    //             }
-    //             ASTExpression::FunctionCall { name: new_fun_name, args: new_args }
-    //         } else {
-    //             panic!("Function {} is not defined", name);
-    //         }
-    //     }
-    // }
+) -> ASTTypedExpression {
+    let ASTTypedExpression { exp, exp_type } = typed_exp;
+    match exp {
+        ASTExpression::Var(name) => {
+            let unique_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
+            ASTExpression::Var(unique_name.clone()).to_typed_without_type()
+        }
+        ASTExpression::Constant(int) => {
+            ASTExpression::Constant(int).to_typed_without_type()
+        }
+        ASTExpression::Unary { op, exp } => {
+            if matches!(op, ASTUnaryOperator::Increment | ASTUnaryOperator::Decrement)
+                && !matches!(exp.exp(), ASTExpression::Var(_)) {
+                panic!("lvalue expected for increment/decrement operator");
+            }
+            let new_exp = resolve_expression(*exp, resolve_context);
+            ASTExpression::Unary {
+                op,
+                exp: Box::new(new_exp),
+            }.to_typed_without_type()
+        }
+        ASTExpression::Binary { op, e1: lhs, e2: rhs } => {
+            let new_lhs = resolve_expression(*lhs, resolve_context);
+            let new_rhs = resolve_expression(*rhs, resolve_context);
+            ASTExpression::Binary {
+                op,
+                e1: Box::new(new_lhs),
+                e2: Box::new(new_rhs)
+            }.to_typed_without_type()
+        }
+        ASTExpression::Assignment { lhs, rhs } => {
+            if !matches!(lhs.as_ref().exp(), ASTExpression::Var(_)) {
+                panic!("Left-hand side of assignment must be a variable");
+            }
+            let new_lhs = resolve_expression(*lhs, resolve_context);
+            let new_rhs = resolve_expression(*rhs, resolve_context);
+            ASTExpression::Assignment {
+                lhs: Box::new(new_lhs),
+                rhs: Box::new(new_rhs)
+            }.to_typed_without_type()
+        }
+        ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
+            if !matches!(lhs.as_ref().exp(), ASTExpression::Var(_)) {
+                panic!("Left-hand side of assignment must be a variable");
+            }
+            let new_lhs = resolve_expression(*lhs, resolve_context);
+            let new_rhs = resolve_expression(*rhs, resolve_context);
+            ASTExpression::CompoundAssignment {
+                lhs: Box::new(new_lhs),
+                rhs: Box::new(new_rhs), operator
+            }.to_typed_without_type()
+        }
+        ASTExpression::Postfix { op, exp } => {
+            if !matches!(exp.as_ref().exp(), ASTExpression::Var(_)) {
+                panic!("Postfix operator must be applied to a variable");
+            }
+            let new_exp = resolve_expression(*exp, resolve_context);
+            ASTExpression::Postfix {
+                op,
+                exp: Box::new(new_exp)
+            }.to_typed_without_type()
+        }
+        ASTExpression::Conditional { condition, if_true, if_false } => {
+            let new_condition = resolve_expression(*condition, resolve_context);
+            let new_if_true = resolve_expression(*if_true, resolve_context);
+            let new_if_false = resolve_expression(*if_false, resolve_context);
+            ASTExpression::Conditional {
+                condition: Box::new(new_condition),
+                if_true: Box::new(new_if_true),
+                if_false: Box::new(new_if_false)
+            }.to_typed_without_type()
+        }
+        ASTExpression::FunctionCall { name, args } => {
+            if resolve_context.identifier_map.contains_key(&name) {
+                let new_fun_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();
+                let mut new_args = vec![];
+                for arg in args.clone() {
+                    let new_arg = resolve_expression(arg, resolve_context);
+                    new_args.push(new_arg);
+                }
+                ASTExpression::FunctionCall { name: new_fun_name, args: new_args }.to_typed_without_type()
+            } else {
+                panic!("Function {} is not defined", name);
+            }
+        }
+        ASTExpression::Cast { target_type, exp } => {
+            let new_inner_exp = resolve_expression(*exp, resolve_context);
+            ASTExpression::Cast {
+                target_type: target_type.clone(),
+                exp: Box::new(new_inner_exp)
+            }.to_typed_without_type()
+        }
+    }
 }

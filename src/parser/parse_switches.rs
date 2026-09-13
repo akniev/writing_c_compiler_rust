@@ -82,17 +82,17 @@ fn parse_statement(statement: ASTStatement, switch_label: Option<String>, switch
             let Some(switch_label) = switch_label else {
                 panic!("Case statement outside of switch");
             };
-            let ASTExpression::Constant(ast_const) = value else {
+            let ASTExpression::Constant(ast_const) = value.exp() else {
                 panic!("Case value is not a constant");
             };
             let case_val = match ast_const {
                 ASTConstant::Int(val) | ASTConstant::Long(val) => val
             };
             let switch_metadata = switch_map.get_mut(&switch_label).unwrap();
-            if switch_metadata.cases.iter().map(|case| case.0).any(|x| x == case_val) {
+            if switch_metadata.cases.iter().map(|case| case.0).any(|x| x == case_val.clone()) {
                 panic!("Duplicate case value in switch");
             }
-            switch_metadata.cases.push((case_val, label.clone()));
+            switch_metadata.cases.push((case_val.clone(), label.clone()));
             parse_statement(body.as_ref().clone(), Some(switch_label), switch_map);
         }
         ASTStatement::Default { body, label } => {
