@@ -81,7 +81,7 @@ fn main() {
         let (program_resolved, symbols) = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_resolved.clone());
         let tacky = parse_tacky(program_resolved, &symbols, switch_map);
-        println!("{:?}", tacky);
+        println!("{:#?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens);

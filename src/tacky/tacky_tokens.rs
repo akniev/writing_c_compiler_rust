@@ -1,8 +1,10 @@
 /*
 program = Program(top_level*)
 top_level = Function(identifier, bool global, identifier* params, instruction* body)
-          | StaticVariable(identifier, bool global, int init)
+          | StaticVariable(identifier, bool global, type t, static_init init)
 instruction = Return(val)
+            | SignExtend(val src, val dst)
+            | Truncate(val src, val dst)
             | Unary(unary_operator, val src, val dst)
             | Binary(binary_operator, val src1, val src2, val dst)
             | Copy(val src, val dst)
@@ -11,10 +13,13 @@ instruction = Return(val)
             | JumpIfNonZero(val condition, identifier target)
             | Label(identifier)
             | FunCall(identifier fun_name, val* args, val dst)
-val = Constant(int) | Var(identifier)
+val = Constant(const) | Var(identifier)
+const = ConstInt(int) | ConstLong(int)
 unary_operator = Complement | Negate
 binary_operator = Add | Subtract | Multiply | Divide | Remainder | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft | ShiftRight | Equal | NotEqual | LessThan | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
  */
+use crate::parser::ast_tokens::ASTConstant;
+use crate::parser::typechecker::StaticInit;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TProgram {
@@ -39,12 +44,14 @@ pub struct TFunction {
 pub struct TStaticVariable {
     pub name: String,
     pub global: bool,
-    pub init: i32
+    pub init: StaticInit
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TInstruction {
     Return(TValue),
+    SignExtend { src: TValue, dst: TValue },
+    Truncate { src: TValue, dst: TValue },
     Unary { op: TUnaryOperator, src: TValue, dst: TValue },
     Binary { op: TBinaryOperator, src1: TValue, src2: TValue, dst: TValue },
     Copy { src: TValue, dst: TValue },
@@ -57,8 +64,8 @@ pub enum TInstruction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TValue {
-    Constant(i32),
-    Var(String)
+    Constant(ASTConstant),
+    Var(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

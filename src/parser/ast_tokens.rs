@@ -81,6 +81,13 @@ impl ASTType {
             _ => false,
         }
     }
+
+    pub fn fun_return_type(&self) -> ASTType {
+        match self {
+            ASTType::FunType(_, ret) => ret.as_ref().clone(),
+            _ => panic!("Not a function type!"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -161,6 +168,16 @@ pub enum ASTExpression {
 pub enum ASTConstant {
     Int(i64),
     Long(i64),
+}
+
+impl ASTConstant {
+    pub fn typed_constant(i: i64, t: ASTType) -> ASTConstant {
+        match t {
+            ASTType::Int => ASTConstant::Int(i),
+            ASTType::Long => ASTConstant::Long(i),
+            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

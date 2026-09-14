@@ -13,18 +13,19 @@ pub fn generate_assembly(program: TProgram) -> ASMProgram {
 }
 
 fn generate_assembly_for_top_level(item: TTopLevel) -> ASMTopLevel {
-    match item {
-        TTopLevel::Function(func) => {
-            generate_assembly_for_function(func)
-        }
-        TTopLevel::StaticVariable(static_variable) => {
-            ASMTopLevel::StaticVariable {
-                name: static_variable.name,
-                global: static_variable.global,
-                init: static_variable.init,
-            }
-        }
-    }
+    panic!("Not implemented!");
+    // match item {
+    //     TTopLevel::Function(func) => {
+    //         generate_assembly_for_function(func)
+    //     }
+    //     TTopLevel::StaticVariable(static_variable) => {
+    //         ASMTopLevel::StaticVariable {
+    //             name: static_variable.name,
+    //             global: static_variable.global,
+    //             init: static_variable.init,
+    //         }
+    //     }
+    // }
 }
 
 fn generate_assembly_for_function(function: TFunction) -> ASMTopLevel {
@@ -76,169 +77,171 @@ fn generate_assembly_for_function(function: TFunction) -> ASMTopLevel {
 }
 
 fn asm_instructions(body: Vec<TInstruction>) -> Vec<ASMInstruction> {
-    let mut instructions = vec![];
-
-    for instruction in body {
-        match instruction {
-            TInstruction::Return(val) => {
-                instructions.append(vec![
-                    ASMInstruction::Mov { src: val.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
-                    ASMInstruction::Ret,
-                ].as_mut());
-            },
-            TInstruction::Unary { op, src, dst } => {
-                match op {
-                    TUnaryOperator::Not => {
-                        instructions.append(vec![
-                            ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: src.to_operand() },
-                            ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
-                            ASMInstruction::SetCC { cond_code: ASMCondCode::E, operand: dst.to_operand() },
-                        ].as_mut());
-                    }
-                    _ => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
-                            ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
-                        ].as_mut());
-                    }
-                }
-            }
-            TInstruction::Binary { op, src1, src2, dst } => {
-                match op {
-                    TBinaryOperator::Divide => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
-                            ASMInstruction::Cdq,
-                            ASMInstruction::Idiv(src2.to_operand()),
-                            ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: dst.to_operand()}
-                        ].as_mut());
-                    }
-                    TBinaryOperator::Remainder => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
-                            ASMInstruction::Cdq,
-                            ASMInstruction::Idiv(src2.to_operand()),
-                            ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::DX), dst: dst.to_operand()}
-                        ].as_mut());
-                    }
-                    TBinaryOperator::GreaterThan |
-                    TBinaryOperator::GreaterThanOrEqual |
-                    TBinaryOperator::LessThan |
-                    TBinaryOperator::LessThanOrEqual |
-                    TBinaryOperator::Equal |
-                    TBinaryOperator::NotEqual => {
-                        instructions.append(vec![
-                            ASMInstruction::Cmp { operand1: src2.to_operand(), operand2: src1.to_operand() },
-                            ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
-                            ASMInstruction::SetCC { cond_code: op.to_cond_code(), operand: dst.to_operand() },
-                        ].as_mut())
-                    }
-                    _ => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov { src: src1.to_operand(), dst: dst.to_operand() },
-                            ASMInstruction::Binary { binop: op.to_operator(), operand1: src2.to_operand(), operand2: dst.to_operand() }
-                        ].as_mut());
-                    }
-                }
-            }
-            TInstruction::FunCall { fun_name, args, dst } => {
-                let arg_registers = vec![
-                    ASMRegister::DI,
-                    ASMRegister::SI,
-                    ASMRegister::DX,
-                    ASMRegister::CX,
-                    ASMRegister::R8,
-                    ASMRegister::R9
-                ];
-
-                let split_at = args.len().min(6);
-                let register_args = &args[..split_at];
-                let stack_args = &args[split_at..];
-                let stack_padding = if stack_args.len() % 2 != 0 {
-                    8
-                } else {
-                    0
-                };
-
-                if stack_padding != 0 {
-                    instructions.push(ASMInstruction::AllocateStack(stack_padding));
-                }
-
-                // pass args in registers
-                let mut reg_index = 0;
-                for tacky_arg in register_args {
-                    let r = arg_registers[reg_index];
-                    let assembly_arg = tacky_arg.to_operand();
-                    instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(r) });
-                    reg_index += 1;
-                }
-
-                // pass args on stack
-                for tacky_arg in stack_args.iter().rev() {
-                    let assembly_arg = tacky_arg.to_operand();
-                    match assembly_arg {
-                        ASMOperand::Reg(_) | ASMOperand::Imm(_) => {
-                            instructions.push(ASMInstruction::Push(assembly_arg));
-                        }
-                        ASMOperand::Pseudo(_) | ASMOperand::Stack(_) | ASMOperand::Data(_) => {
-                            instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(ASMRegister::AX) });
-                            instructions.push(ASMInstruction::Push(ASMOperand::Reg(ASMRegister::AX)));
-                        }
-                    }
-                }
-
-                // emit call instruction
-                instructions.push(ASMInstruction::Call(fun_name.clone()));
-
-                // adjust stack pointer
-                let bytes_to_remove: i32 = 8 * (stack_args.len() as i32) + stack_padding;
-                if bytes_to_remove > 0 {
-                    instructions.push(ASMInstruction::DeallocateStack(bytes_to_remove));
-                }
-
-                // retrieve return value
-                let assembly_dst = dst.to_operand();
-                instructions.push(ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: assembly_dst });
-            }
-            TInstruction::JumpIfZero { val, label } => {
-                instructions.append(vec![
-                    ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
-                    ASMInstruction::JmpCC { cond_code: ASMCondCode::E, label },
-                ].as_mut());
-            }
-            TInstruction::JumpIfNonZero { val, label } => {
-                instructions.append(vec![
-                    ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
-                    ASMInstruction::JmpCC { cond_code: ASMCondCode::NE, label },
-                ].as_mut())
-            }
-            TInstruction::Jump { label } => {
-                instructions.append(vec![
-                    ASMInstruction::Jmp { label },
-                ].as_mut());
-            }
-            TInstruction::Label { label } => {
-                instructions.append(vec![
-                    ASMInstruction::Label(label),
-                ].as_mut());
-            }
-            TInstruction::Copy { src, dst } => {
-                instructions.append(vec![
-                    ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
-                ].as_mut());
-            }
-        }
-    }
-
-    instructions
+    panic!("Not implemented!");
+    // let mut instructions = vec![];
+    //
+    // for instruction in body {
+    //     match instruction {
+    //         TInstruction::Return(val) => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Mov { src: val.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+    //                 ASMInstruction::Ret,
+    //             ].as_mut());
+    //         },
+    //         TInstruction::Unary { op, src, dst } => {
+    //             match op {
+    //                 TUnaryOperator::Not => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: src.to_operand() },
+    //                         ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
+    //                         ASMInstruction::SetCC { cond_code: ASMCondCode::E, operand: dst.to_operand() },
+    //                     ].as_mut());
+    //                 }
+    //                 _ => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
+    //                         ASMInstruction::Unary { unop: op.to_operator(), operand: dst.to_operand() },
+    //                     ].as_mut());
+    //                 }
+    //             }
+    //         }
+    //         TInstruction::Binary { op, src1, src2, dst } => {
+    //             match op {
+    //                 TBinaryOperator::Divide => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+    //                         ASMInstruction::Cdq,
+    //                         ASMInstruction::Idiv(src2.to_operand()),
+    //                         ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: dst.to_operand()}
+    //                     ].as_mut());
+    //                 }
+    //                 TBinaryOperator::Remainder => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Mov { src: src1.to_operand(), dst: ASMOperand::Reg(ASMRegister::AX) },
+    //                         ASMInstruction::Cdq,
+    //                         ASMInstruction::Idiv(src2.to_operand()),
+    //                         ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::DX), dst: dst.to_operand()}
+    //                     ].as_mut());
+    //                 }
+    //                 TBinaryOperator::GreaterThan |
+    //                 TBinaryOperator::GreaterThanOrEqual |
+    //                 TBinaryOperator::LessThan |
+    //                 TBinaryOperator::LessThanOrEqual |
+    //                 TBinaryOperator::Equal |
+    //                 TBinaryOperator::NotEqual => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Cmp { operand1: src2.to_operand(), operand2: src1.to_operand() },
+    //                         ASMInstruction::Mov { src: ASMOperand::Imm(0), dst: dst.to_operand() },
+    //                         ASMInstruction::SetCC { cond_code: op.to_cond_code(), operand: dst.to_operand() },
+    //                     ].as_mut())
+    //                 }
+    //                 _ => {
+    //                     instructions.append(vec![
+    //                         ASMInstruction::Mov { src: src1.to_operand(), dst: dst.to_operand() },
+    //                         ASMInstruction::Binary { binop: op.to_operator(), operand1: src2.to_operand(), operand2: dst.to_operand() }
+    //                     ].as_mut());
+    //                 }
+    //             }
+    //         }
+    //         TInstruction::FunCall { fun_name, args, dst } => {
+    //             let arg_registers = vec![
+    //                 ASMRegister::DI,
+    //                 ASMRegister::SI,
+    //                 ASMRegister::DX,
+    //                 ASMRegister::CX,
+    //                 ASMRegister::R8,
+    //                 ASMRegister::R9
+    //             ];
+    //
+    //             let split_at = args.len().min(6);
+    //             let register_args = &args[..split_at];
+    //             let stack_args = &args[split_at..];
+    //             let stack_padding = if stack_args.len() % 2 != 0 {
+    //                 8
+    //             } else {
+    //                 0
+    //             };
+    //
+    //             if stack_padding != 0 {
+    //                 instructions.push(ASMInstruction::AllocateStack(stack_padding));
+    //             }
+    //
+    //             // pass args in registers
+    //             let mut reg_index = 0;
+    //             for tacky_arg in register_args {
+    //                 let r = arg_registers[reg_index];
+    //                 let assembly_arg = tacky_arg.to_operand();
+    //                 instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(r) });
+    //                 reg_index += 1;
+    //             }
+    //
+    //             // pass args on stack
+    //             for tacky_arg in stack_args.iter().rev() {
+    //                 let assembly_arg = tacky_arg.to_operand();
+    //                 match assembly_arg {
+    //                     ASMOperand::Reg(_) | ASMOperand::Imm(_) => {
+    //                         instructions.push(ASMInstruction::Push(assembly_arg));
+    //                     }
+    //                     ASMOperand::Pseudo(_) | ASMOperand::Stack(_) | ASMOperand::Data(_) => {
+    //                         instructions.push(ASMInstruction::Mov { src: assembly_arg, dst: ASMOperand::Reg(ASMRegister::AX) });
+    //                         instructions.push(ASMInstruction::Push(ASMOperand::Reg(ASMRegister::AX)));
+    //                     }
+    //                 }
+    //             }
+    //
+    //             // emit call instruction
+    //             instructions.push(ASMInstruction::Call(fun_name.clone()));
+    //
+    //             // adjust stack pointer
+    //             let bytes_to_remove: i32 = 8 * (stack_args.len() as i32) + stack_padding;
+    //             if bytes_to_remove > 0 {
+    //                 instructions.push(ASMInstruction::DeallocateStack(bytes_to_remove));
+    //             }
+    //
+    //             // retrieve return value
+    //             let assembly_dst = dst.to_operand();
+    //             instructions.push(ASMInstruction::Mov { src: ASMOperand::Reg(ASMRegister::AX), dst: assembly_dst });
+    //         }
+    //         TInstruction::JumpIfZero { val, label } => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
+    //                 ASMInstruction::JmpCC { cond_code: ASMCondCode::E, label },
+    //             ].as_mut());
+    //         }
+    //         TInstruction::JumpIfNonZero { val, label } => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Cmp { operand1: ASMOperand::Imm(0), operand2: val.to_operand() },
+    //                 ASMInstruction::JmpCC { cond_code: ASMCondCode::NE, label },
+    //             ].as_mut())
+    //         }
+    //         TInstruction::Jump { label } => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Jmp { label },
+    //             ].as_mut());
+    //         }
+    //         TInstruction::Label { label } => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Label(label),
+    //             ].as_mut());
+    //         }
+    //         TInstruction::Copy { src, dst } => {
+    //             instructions.append(vec![
+    //                 ASMInstruction::Mov { src: src.to_operand(), dst: dst.to_operand() },
+    //             ].as_mut());
+    //         }
+    //     }
+    // }
+    //
+    // instructions
 }
 
 impl TValue {
     pub fn to_operand(&self) -> ASMOperand {
-        match self {
-            TValue::Constant(value) => ASMOperand::Imm(value.clone()),
-            TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
-        }
+        panic!("Not implemented!");
+        // match self {
+        //     TValue::Constant(value) => ASMOperand::Imm(value.clone()),
+        //     TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
+        // }
     }
 }
 
