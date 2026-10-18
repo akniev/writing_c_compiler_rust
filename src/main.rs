@@ -9,6 +9,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use crate::assembly::assembly_generator::generate_assembly;
+use crate::assembly::backend_symbol_table::generate_backend_symbol_table;
 use crate::assembly::code_emission::generate_code;
 use crate::assembly::fixup_instructions::fix_movs_in_program;
 use crate::assembly::fix_pseudo::fix_pseudo_in_program;
@@ -78,20 +79,21 @@ fn main() {
         let program = parse(tokens);
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        let (program_resolved, symbols) = typecheck(program_loops_labelled.clone());
+        let (program_resolved, mut symbols) = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_resolved.clone());
-        let tacky = parse_tacky(program_resolved, &symbols, switch_map);
+        let tacky = parse_tacky(program_resolved, &mut symbols, switch_map);
         println!("{:#?}", tacky);
     } else if args.codegen {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        let (program_resolved, symbols) = typecheck(program_loops_labelled.clone());
+        let (program_resolved, mut symbols) = typecheck(program_loops_labelled.clone());
         let switch_map = parse_switches(program_resolved.clone());
-        let tacky = parse_tacky(program_resolved, &symbols, switch_map);
-        let assembly = generate_assembly(tacky);
-        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &symbols);
+        let tacky = parse_tacky(program_resolved, &mut symbols, switch_map);
+        let assembly = generate_assembly(tacky, &symbols);
+        let backend_symbol_table = generate_backend_symbol_table(&symbols);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &backend_symbol_table);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
         println!("{:#?}", assembly_mov_fixed);
     } else {
@@ -102,7 +104,7 @@ fn main() {
 
         let program_resolved = resolve_identifiers(program);
         let program_loops_labelled = label_program(program_resolved);
-        let (program_resolved, symbols) = typecheck(program_loops_labelled.clone());
+        let (program_resolved, mut symbols) = typecheck(program_loops_labelled.clone());
         println!("AST:");
         println!("{:#?}", program_resolved);
 
@@ -110,12 +112,13 @@ fn main() {
         println!("Switch map:");
         println!("{:#?}", switch_map);
 
-        let tacky = parse_tacky(program_resolved, &symbols, switch_map);
+        let tacky = parse_tacky(program_resolved, &mut symbols, switch_map);
         println!("Tacky:");
         println!("{}", print_tacky(&tacky));
 
-        let assembly = generate_assembly(tacky);
-        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &symbols);
+        let assembly = generate_assembly(tacky, &symbols);
+        let backend_symbol_table = generate_backend_symbol_table(&symbols);
+        let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &backend_symbol_table);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
         let code = generate_code(assembly_mov_fixed, &symbols);
         println!("Assembly:");

@@ -13,6 +13,123 @@ pub fn resolve_identifiers(program: ASTProgram) -> ASTProgram {
     ASTProgram { declarations: new_declarations }
 }
 
+fn resolve_declaration(
+    declaration: ASTDeclaration,
+    resolve_context: &mut ResolveContext,
+    file_scope: bool,
+) -> ASTDeclaration {
+    match declaration {
+        ASTDeclaration::VariableDeclaration(variable_declaration) => {
+            let variable_declaration = if file_scope {
+                resolve_file_scope_variable_declaration(variable_declaration, resolve_context)
+            } else {
+                resolve_block_scope_variable_declaration(variable_declaration, resolve_context)
+            };
+            ASTDeclaration::VariableDeclaration(variable_declaration)
+        }
+        ASTDeclaration::FunctionDeclaration(function_declaration) => {
+            let ASTFunctionDeclaration {
+                name,
+                params: _,
+                body,
+                _type: _,
+                storage_class
+            } = function_declaration.clone();
+            if !file_scope && body != None {
+                panic!("Nested function definitions are not allowed");
+            }
+            if !file_scope && storage_class == Some(ASTStorageClass::Static) {
+                panic!("Static functions are not allowed in block scope");
+            }
+
+            resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
+            let function_declaration = resolve_function_declaration(function_declaration, resolve_context);
+            ASTDeclaration::FunctionDeclaration(function_declaration)
+        }
+    }
+}
+
+fn resolve_file_scope_variable_declaration(
+    variable_declaration: ASTVariableDeclaration,
+    resolve_context: &mut ResolveContext
+) -> ASTVariableDeclaration {
+    let ASTVariableDeclaration {
+        name,
+        init,
+        _type,
+        storage_class
+    } = variable_declaration;
+    resolve_context.identifier_map.insert(
+        name.clone(),
+        VariableMapEntry {
+            name: name.clone(),
+            has_external_linkage: true,
+            from_current_scope: true
+        }
+    );
+    // We don't need to resolve the init expression here, because it has to be a constant at file scope
+    ASTVariableDeclaration { name, init, _type, storage_class }
+}
+
+fn resolve_block_scope_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
+    let ASTVariableDeclaration {
+        name,
+        init,
+        _type,
+        storage_class
+    } = variable_declaration;
+    if resolve_context.identifier_map.contains_key(&name) {
+        let prev_entry = resolve_context.identifier_map.get(&name).unwrap();
+        if prev_entry.from_current_scope {
+            if !(prev_entry.has_external_linkage &&  storage_class == Some(ASTStorageClass::Extern)) {
+                panic!("Conflicting local declaration!");
+            }
+        }
+    }
+
+    if storage_class == Some(ASTStorageClass::Extern) {
+        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
+        ASTVariableDeclaration { name, init, _type, storage_class }
+    } else {
+        let unique_name = get_unique_label(&name);
+        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
+        let new_init = init.map(|init| resolve_expression(init, resolve_context));
+        ASTVariableDeclaration { name: unique_name, init: new_init, _type, storage_class }
+    }
+}
+
+fn resolve_function_declaration(
+    function_declaration: ASTFunctionDeclaration,
+    resolve_context: &mut ResolveContext,
+) -> ASTFunctionDeclaration {
+    let ASTFunctionDeclaration { name, params: _, body: _, _type, storage_class: _ } = function_declaration.clone();
+    if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
+        panic!("Duplicate declaration with different linkage for function {}", name);
+    }
+    resolve_context.identifier_map.insert(
+        name.clone(),
+        VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true }
+    );
+
+    let mut function_context = resolve_context.clone_for_new_scope();
+    let labels = get_labels(&function_declaration);
+    function_context.labels = labels.clone();
+
+    let mut new_params = vec![];
+    for param in function_declaration.params.clone() {
+        let new_param = resolve_param(param, &mut function_context);
+        new_params.push(new_param);
+    }
+    let new_body = function_declaration.body.map(|b|resolve_block(b, &mut function_context));
+    ASTFunctionDeclaration {
+        name: function_declaration.name,
+        params: new_params,
+        body: new_body,
+        _type,
+        storage_class: function_declaration.storage_class,
+    }
+}
+
 fn resolve_block(
     block: ASTBlock,
     resolve_context: &mut ResolveContext,
@@ -164,123 +281,6 @@ fn resolve_forinit(init: ASTForInit, resolve_context: &mut ResolveContext) -> AS
             let new_expression = expression.map(|object|resolve_expression(object, resolve_context));
             ASTForInit::InitExp(new_expression)
         }
-    }
-}
-
-fn resolve_declaration(
-    declaration: ASTDeclaration,
-    resolve_context: &mut ResolveContext,
-    file_scope: bool,
-) -> ASTDeclaration {
-    match declaration {
-        ASTDeclaration::VariableDeclaration(variable_declaration) => {
-            let variable_declaration = if file_scope {
-                resolve_file_scope_variable_declaration(variable_declaration, resolve_context)
-            } else {
-                resolve_block_scope_variable_declaration(variable_declaration, resolve_context)
-            };
-            ASTDeclaration::VariableDeclaration(variable_declaration)
-        }
-        ASTDeclaration::FunctionDeclaration(function_declaration) => {
-            let ASTFunctionDeclaration {
-                name,
-                params: _,
-                body,
-                _type: _,
-                storage_class
-            } = function_declaration.clone();
-            if !file_scope && body != None {
-                panic!("Nested function definitions are not allowed");
-            }
-            if !file_scope && storage_class == Some(ASTStorageClass::Static) {
-                panic!("Static functions are not allowed in block scope");
-            }
-
-            resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
-            let function_declaration = resolve_function_declaration(function_declaration, resolve_context);
-            ASTDeclaration::FunctionDeclaration(function_declaration)
-        }
-    }
-}
-
-fn resolve_block_scope_variable_declaration(variable_declaration: ASTVariableDeclaration, resolve_context: &mut ResolveContext) -> ASTVariableDeclaration {
-    let ASTVariableDeclaration {
-        name,
-        init,
-        _type,
-        storage_class
-    } = variable_declaration;
-    if resolve_context.identifier_map.contains_key(&name) {
-        let prev_entry = resolve_context.identifier_map.get(&name).unwrap();
-        if prev_entry.from_current_scope {
-            if !(prev_entry.has_external_linkage &&  storage_class == Some(ASTStorageClass::Extern)) {
-                panic!("Conflicting local declaration!");
-            }
-        }
-    }
-
-    if storage_class == Some(ASTStorageClass::Extern) {
-        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true });
-        ASTVariableDeclaration { name, init, _type, storage_class }
-    } else {
-        let unique_name = get_unique_label(&name);
-        resolve_context.identifier_map.insert(name.clone(), VariableMapEntry { name: unique_name.clone(), has_external_linkage: false, from_current_scope: true });
-        let new_init = init.map(|init| resolve_expression(init, resolve_context));
-        ASTVariableDeclaration { name: unique_name, init: new_init, _type, storage_class }
-    }
-}
-
-fn resolve_file_scope_variable_declaration(
-    variable_declaration: ASTVariableDeclaration,
-    resolve_context: &mut ResolveContext
-) -> ASTVariableDeclaration {
-    let ASTVariableDeclaration {
-        name,
-        init,
-        _type,
-        storage_class
-    } = variable_declaration;
-    resolve_context.identifier_map.insert(
-        name.clone(),
-        VariableMapEntry {
-            name: name.clone(),
-            has_external_linkage: true,
-            from_current_scope: true
-        }
-    );
-    // We don't need to resolve the init expression here, because it has to be a constant at file scope
-    ASTVariableDeclaration { name, init, _type, storage_class }
-}
-
-fn resolve_function_declaration(
-    function_declaration: ASTFunctionDeclaration,
-    resolve_context: &mut ResolveContext,
-) -> ASTFunctionDeclaration {
-    let ASTFunctionDeclaration { name, params: _, body: _, _type, storage_class: _ } = function_declaration.clone();
-    if resolve_context.identifier_map.contains_key(&name) && !resolve_context.identifier_map.get(&name).unwrap().has_external_linkage {
-        panic!("Duplicate declaration with different linkage for function {}", name);
-    }
-    resolve_context.identifier_map.insert(
-        name.clone(),
-        VariableMapEntry { name: name.clone(), has_external_linkage: true, from_current_scope: true }
-    );
-
-    let mut function_context = resolve_context.clone_for_new_scope();
-    let labels = get_labels(&function_declaration);
-    function_context.labels = labels.clone();
-
-    let mut new_params = vec![];
-    for param in function_declaration.params.clone() {
-        let new_param = resolve_param(param, &mut function_context);
-        new_params.push(new_param);
-    }
-    let new_body = function_declaration.body.map(|b|resolve_block(b, &mut function_context));
-    ASTFunctionDeclaration {
-        name: function_declaration.name,
-        params: new_params,
-        body: new_body,
-        _type,
-        storage_class: function_declaration.storage_class,
     }
 }
 

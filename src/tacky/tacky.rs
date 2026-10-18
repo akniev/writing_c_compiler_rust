@@ -9,7 +9,7 @@ use crate::parser::typechecker::SymbolAttrs::StaticAttr;
 
 pub fn parse_tacky(
     program: ASTProgram,
-    ast_symbols: &HashMap<String, Symbol>,
+    ast_symbols: &mut HashMap<String, Symbol>,
     switch_map: HashMap<String, SwitchMetadata>,
 ) -> TProgram {
     let mut symbols: HashMap<String, Symbol> = HashMap::new();
@@ -32,6 +32,9 @@ pub fn parse_tacky(
     }
 
     let tprog = TProgram { top_level };
+
+    ast_symbols.extend(symbols);
+
     tprog
 }
 
@@ -445,7 +448,8 @@ fn emit_tacky(
         }
         ASTExpression::Conditional { condition, if_true, if_false } => {
             let condition_val = emit_tacky(condition.as_ref(), instructions, symbols);
-            let result_name = make_temporary_identifier("result");
+            let true_type = if_true.exp_type.clone();
+            let result_name = make_temporary_identifier("result", true_type, symbols);
             let result = TValue::Var(result_name);
             let e2_label = make_label("e2_label");
             let end_label = make_label("end_label");
@@ -498,12 +502,27 @@ fn emit_tacky(
 
 fn make_temporary(
     var_type: Option<ASTType>,
-    symbols: &mut HashMap<String, Symbol>
+    symbols: &mut HashMap<String, Symbol>,
+) -> String {
+    let var_name = make_temporary_identifier("tmp", var_type, symbols);
+    var_name
+}
+
+fn make_temporary_identifier(
+    prefix: &str,
+    var_type: Option<ASTType>,
+    symbols: &mut HashMap<String, Symbol>,
 ) -> String {
     let Some(t) = var_type.clone() else {
         panic!("Wrong type!");
     };
-    let var_name = make_temporary_identifier("tmp");
+
+    let id = get_global_counter();
+    let var_name = if prefix.is_empty() {
+        format!("tmp.{}", id)
+    } else {
+        format!("{}.{}", prefix, id)
+    };
     symbols.insert(
         var_name.clone(),
         Symbol {
@@ -513,15 +532,6 @@ fn make_temporary(
         }
     );
     var_name
-}
-
-fn make_temporary_identifier(prefix: &str) -> String {
-    let id = get_global_counter();
-    if prefix.is_empty() {
-        format!("tmp.{}", id)
-    } else {
-        format!("{}.{}", prefix, id)
-    }
 }
 
 fn make_label(prefix: &str) -> String {

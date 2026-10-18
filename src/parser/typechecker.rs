@@ -89,7 +89,7 @@ fn typechecked_function_declaration(
         }
         let function_info = FunctionInfo {
             name: function_declaration.name.clone(),
-            return_type: function_declaration._type.clone(),
+            return_type: function_declaration._type.fun_return_type(),
         };
         new_body = Some(typechecked_block(function_declaration.body.unwrap(), symbols, Some(function_info)));
     }
@@ -555,6 +555,14 @@ impl SymbolAttrs {
                 panic!("Not implemented yet")
             },
             SymbolAttrs::LocalAttr => true,
+        }
+    }
+
+    pub fn is_static(&self) -> bool {
+        match self {
+            SymbolAttrs::FunAttr { .. } => false,
+            SymbolAttrs::StaticAttr { .. } => true,
+            SymbolAttrs::LocalAttr => false,
         }
     }
 

@@ -1,19 +1,19 @@
 /*
  program = Program(top_level*)
+ assembly_type = Longword | Quadword
  top_level = Function(identifier name, bool global, instruction* instructions)
-           | StaticVariable(identifier name, bool global, int init)
- instruction = Mov(operand src, operand dst)
-             | Unary(unary_operator, operand)
-             | Binary(binary_operator, operand, operand)
-             | Cmp(operand, operand)
-             | Idiv(operand)
-             | Cdq
+           | StaticVariable(identifier name, bool global, int alignment, int init)
+ instruction = Mov(assembly_type, operand src, operand dst)
+             | Movsx(operand src, operand dst)
+             | Unary(unary_operator, assembly_type, operand)
+             | Binary(binary_operator, assembly_type, operand, operand)
+             | Cmp(assembly_type, operand, operand)
+             | Idiv(assembly_type, operand)
+             | Cdq(assembly_type)
              | Jmp(identifier)
              | JmpCC(cond_code, identifier)
              | SetCC(cond_code, operand)
              | Label(identifier)
-             | AllocateStack(int)
-             | DeallocateStack(int)
              | Push(operand)
              | Call(identifier)
              | Ret
@@ -21,18 +21,54 @@
  binary_operator = Add | Sub | Mult
  operand = Imm(int) | Reg(reg) | Pseudo(identifier) | Stack(int) | Data(identifier)
  cond_code = E | NE | G | GE | L | LE
- reg = AX | CX | DX | DI | SI | R8 | R9 | R10 | R11
+ reg = AX | CX | DX | DI | SI | R8 | R9 | R10 | R11 | SP
  */
+use crate::parser::ast_tokens::ASTType;
+use crate::parser::typechecker::StaticInit;
 
 #[derive(Debug, PartialEq)]
 pub struct ASMProgram {
     pub top_level: Vec<ASMTopLevel>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ASMType {
+    Longword,
+    Quadword,
+}
+
+impl StaticInit {
+    pub fn asm_type(&self) -> ASMType {
+        match self {
+            StaticInit::IntInit(_) => ASMType::Longword,
+            StaticInit::LongInit(_) => ASMType::Quadword,
+        }
+    }
+}
+
+impl ASTType {
+    pub fn asm_type(&self) -> ASMType {
+        match self {
+            ASTType::Int => ASMType::Longword,
+            ASTType::Long => ASMType::Quadword,
+            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+        }
+    }
+}
+
+impl ASMType {
+    pub fn alignment(&self) -> i32 {
+        match self {
+            ASMType::Longword => 4,
+            ASMType::Quadword => 8,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ASMTopLevel {
     Function { name: String, global: bool, instructions: Vec<ASMInstruction> },
-    StaticVariable { name: String, global: bool, init: i32 },
+    StaticVariable { name: String, global: bool, alignment: i32, init: StaticInit },
 }
 
 // #[derive(Debug, PartialEq)]
@@ -43,18 +79,17 @@ pub enum ASMTopLevel {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMInstruction {
-    Mov { src: ASMOperand, dst: ASMOperand },
-    Unary { unop: ASMUnaryOperator, operand: ASMOperand },
-    Binary { binop: ASMBinaryOperator, operand1: ASMOperand, operand2: ASMOperand },
-    Cmp { operand1: ASMOperand, operand2: ASMOperand },
-    Idiv(ASMOperand),
+    Mov { _type: ASMType, src: ASMOperand, dst: ASMOperand },
+    Movsx { src: ASMOperand, dst: ASMOperand },
+    Unary { unop: ASMUnaryOperator, _type: ASMType, operand: ASMOperand },
+    Binary { binop: ASMBinaryOperator, _type: ASMType, operand1: ASMOperand, operand2: ASMOperand },
+    Cmp { _type: ASMType, operand1: ASMOperand, operand2: ASMOperand },
+    Idiv { _type: ASMType, op: ASMOperand },
+    Cdq { _type: ASMType },
     Jmp { label: String },
     JmpCC { cond_code: ASMCondCode, label: String },
     SetCC { cond_code: ASMCondCode, operand: ASMOperand },
     Label(String),
-    Cdq,
-    AllocateStack(i32),
-    DeallocateStack(i32),
     Push(ASMOperand),
     Call(String),
     Ret,
@@ -90,10 +125,10 @@ pub enum ASMBinaryOperator {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMOperand {
-    Imm(i32),
+    Imm(i64),
     Reg(ASMRegister),
     Pseudo(String),
-    Stack(i32),
+    Stack(i64),
     Data(String),
 }
 
@@ -108,6 +143,7 @@ pub enum ASMRegister {
     R9,
     R10,
     R11,
+    SP,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -158,6 +194,7 @@ impl ASMRegister {
             ASMRegister::R9 => "%r9b".to_string(),
             ASMRegister::R10 => "%r10b".to_string(),
             ASMRegister::R11 => "%r11b".to_string(),
+            ASMRegister::SP => panic!("SP is not a 1-byte register"),
         }
     }
 
@@ -172,6 +209,7 @@ impl ASMRegister {
             ASMRegister::R9 => "%r9d".to_string(),
             ASMRegister::R10 => "%r10d".to_string(),
             ASMRegister::R11 => "%r11d".to_string(),
+            ASMRegister::SP => panic!("SP is not a 4-byte register"),
         }
     }
 
@@ -186,6 +224,7 @@ impl ASMRegister {
             ASMRegister::R9 => "%r9".to_string(),
             ASMRegister::R10 => "%r10".to_string(),
             ASMRegister::R11 => "%r11".to_string(),
+            ASMRegister::SP => "%rsp".to_string(),
         }
     }
 }
@@ -210,6 +249,26 @@ impl ASMBinaryOperator {
             ASMBinaryOperator::Xor => "xorl".to_string(),
             ASMBinaryOperator::ShiftLeft => "sall".to_string(),
             ASMBinaryOperator::ShiftRight => "sarl".to_string(),
+        }
+    }
+}
+
+impl ASMInstruction {
+    pub fn allocate_stack(bytes: i64) -> ASMInstruction {
+        ASMInstruction::Binary {
+            binop: ASMBinaryOperator::Sub,
+            _type: ASMType::Quadword,
+            operand1: ASMOperand::Imm(bytes),
+            operand2: ASMOperand::Reg(ASMRegister::SP),
+        }
+    }
+
+    pub fn deallocate_stack(bytes: i64) -> ASMInstruction {
+        ASMInstruction::Binary {
+            binop: ASMBinaryOperator::Add,
+            _type: ASMType::Quadword,
+            operand1: ASMOperand::Reg(ASMRegister::SP),
+            operand2: ASMOperand::Imm(bytes),
         }
     }
 }
