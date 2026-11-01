@@ -88,6 +88,13 @@ impl ASTType {
             _ => panic!("Not a function type!"),
         }
     }
+    
+    pub fn fun_param_types(&self) -> Vec<ASTType> {
+        match self {
+            ASTType::FunType(params, _) => params.iter().map(|t| t.as_ref().clone()).collect(),
+            _ => panic!("Not a function type!"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

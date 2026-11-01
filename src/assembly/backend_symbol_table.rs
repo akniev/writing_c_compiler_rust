@@ -41,7 +41,7 @@ impl ASMSymtabEntry {
     pub fn is_static(&self) -> bool {
         match self {
             ASMSymtabEntry::ObjEntry { is_static, .. } => *is_static,
-            ASMSymtabEntry::FunEntry { defined } => panic!("Called is_static on FunEntry: {:?}", self),
+            ASMSymtabEntry::FunEntry { defined: _ } => panic!("Called is_static on FunEntry: {:?}", self),
         }
     }
     

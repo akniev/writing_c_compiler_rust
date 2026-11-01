@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::os::unix::fs::symlink;
 use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMType, ASMUnaryOperator};
 use crate::parser::ast_tokens::ASTConstant;
 use crate::parser::typechecker::Symbol;
@@ -184,6 +183,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                     TBinaryOperator::LessThanOrEqual |
                     TBinaryOperator::Equal |
                     TBinaryOperator::NotEqual => {
+                        let dst_type = get_tvalue_type(&dst, symbols);
                         instructions.append(vec![
                             ASMInstruction::Cmp {
                                 _type,
@@ -191,7 +191,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                                 operand2: src1.to_operand()
                             },
                             ASMInstruction::Mov {
-                                _type,
+                                _type: dst_type,
                                 src: ASMOperand::Imm(0),
                                 dst: dst.to_operand()
                             },
@@ -329,7 +329,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 ].as_mut());
             }
             TInstruction::Copy { src, dst } => {
-                let _type = get_tvalue_type(&src, symbols);
+                let _type = get_tvalue_type(&dst, symbols);
                 instructions.append(vec![
                     ASMInstruction::Mov {
                         _type,

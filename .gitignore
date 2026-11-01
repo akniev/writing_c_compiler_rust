@@ -2,3 +2,5 @@
 /src/test.c
 /src/test.s
 /src/test
+/temp
+.gdb_history

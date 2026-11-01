@@ -294,10 +294,10 @@ impl LexerTokenKind {
             LexerTokenKind::Identifier => LexerToken::Identifier(text.to_string()),
             LexerTokenKind::Const => {
                 let number = text.parse::<i64>().unwrap();
-                if number > 2^31 - 1 || number < -2^31 {
-                    LexerToken::LongConst(number)
-                } else {
+                if i32::try_from(number).is_ok() {
                     LexerToken::Const(number as i32)
+                } else {
+                    LexerToken::LongConst(number)
                 }
             },
             LexerTokenKind::LongConst => LexerToken::LongConst(text.trim_end_matches(['l', 'L']).parse().unwrap()),

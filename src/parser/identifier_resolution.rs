@@ -297,7 +297,7 @@ fn resolve_expression(
     typed_exp: ASTTypedExpression,
     resolve_context: &mut ResolveContext,
 ) -> ASTTypedExpression {
-    let ASTTypedExpression { exp, exp_type } = typed_exp;
+    let ASTTypedExpression { exp, exp_type: _ } = typed_exp;
     match exp {
         ASTExpression::Var(name) => {
             let unique_name = resolve_context.identifier_map.get(&name).unwrap().name.clone();

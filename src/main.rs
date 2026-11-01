@@ -120,8 +120,17 @@ fn main() {
         let backend_symbol_table = generate_backend_symbol_table(&symbols);
         let assembly_pseudo_fixed = fix_pseudo_in_program(assembly, &backend_symbol_table);
         let assembly_mov_fixed = fix_movs_in_program(assembly_pseudo_fixed);
-        let code = generate_code(assembly_mov_fixed, &symbols);
+        println!("Symbol table:");
+        println!("{:#?}", symbols);
+
+        println!("Backend symbol table:");
+        println!("{:#?}", backend_symbol_table);
+
         println!("Assembly:");
+        println!("{:#?}", assembly_mov_fixed);
+
+        let code = generate_code(assembly_mov_fixed, &symbols);
+        println!("Assembly Code:");
         println!("{}", code);
 
         let path = Path::new(&args.input);

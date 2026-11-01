@@ -25,9 +25,14 @@ fn fix_pseudo_in_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, ASM
                 let n_instruction = fix_pseudo_in_instruction(instruction, symbols);
                 new_instructions.push(n_instruction);
             }
+            let frame_size = align_up(
+                TEMP_COUNTER.load(Ordering::Relaxed),
+                16
+            );
+
             new_instructions.insert(
                 0,
-                ASMInstruction::allocate_stack(TEMP_COUNTER.load(Ordering::Relaxed))
+                ASMInstruction::allocate_stack(frame_size)
             );
             ASMTopLevel::Function { name, global, instructions: new_instructions }
         }

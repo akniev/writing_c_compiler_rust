@@ -83,29 +83,49 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                     ]);
                 }
                 _ => {
-                    n_instructions.extend(vec![instruction]);
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src, dst },
+                    ]);
                 }
             }
             n_instructions
         }
         ASMInstruction::Cmp { _type, operand1, operand2 } => {
-            match (operand1.clone(), operand2.clone()) {
-                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
-                    vec![
-                        ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
-                        ASMInstruction::Cmp { _type, operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
-                    ]
-                }
-                (operand1, operand2 @ ASMOperand::Imm(_)) => {
-                    vec![
-                        ASMInstruction::Mov { _type, src: operand2, dst: ASMOperand::Reg(ASMRegister::R11) },
-                        ASMInstruction::Cmp { _type, operand1, operand2: ASMOperand::Reg(ASMRegister::R11) }
-                    ]
+            let mut n_instructions = vec![];
+
+            let operand1 = match operand1 {
+                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R9) },
+                    ]);
+                    ASMOperand::Reg(ASMRegister::R9)
                 }
                 _ => {
-                    vec![instruction]
+                    operand1
+                }
+            };
+
+            match (operand1.clone(), operand2.clone()) {
+                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
+                        ASMInstruction::Cmp { _type, operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
+                    ]);
+                }
+                (operand1, operand2 @ ASMOperand::Imm(_)) => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand2, dst: ASMOperand::Reg(ASMRegister::R11) },
+                        ASMInstruction::Cmp { _type, operand1, operand2: ASMOperand::Reg(ASMRegister::R11) }
+                    ]);
+                }
+                _ => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Cmp { _type, operand1, operand2 },
+                    ]);
                 }
             }
+
+            n_instructions
         }
         ASMInstruction::Binary {
             binop: binop @ (
@@ -119,17 +139,34 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             operand1,
             operand2
         } => {
-            match (operand1.clone(), operand2.clone()) {
-                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
-                    vec![
-                        ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
-                        ASMInstruction::Binary { binop, _type, operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
-                    ]
+            let mut n_instructions = vec![];
+
+            let operand1 = match operand1 {
+                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand1.clone(), dst: ASMOperand::Reg(ASMRegister::R10) },
+                    ]);
+                    ASMOperand::Reg(ASMRegister::R10)
                 }
                 _ => {
-                    vec![instruction]
+                    operand1
+                }
+            };
+
+            match (operand1.clone(), operand2.clone()) {
+                (ASMOperand::Stack(_) | ASMOperand::Data(_), ASMOperand::Stack(_) | ASMOperand::Data(_)) => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R10) },
+                        ASMInstruction::Binary { binop, _type, operand1: ASMOperand::Reg(ASMRegister::R10), operand2 }
+                    ]);
+                }
+                _ => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Binary { binop, _type, operand1, operand2 }
+                    ]);
                 }
             }
+            n_instructions
         }
         ASMInstruction::Binary {
             binop: binop @ ASMBinaryOperator::Mult,
@@ -137,18 +174,35 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             operand1,
             operand2
         } => {
+            let mut n_instructions = vec![];
+
+            let operand1 = match operand1 {
+                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                    n_instructions.extend(vec![
+                        ASMInstruction::Mov { _type, src: operand1.clone(), dst: ASMOperand::Reg(ASMRegister::R10) },
+                    ]);
+                    ASMOperand::Reg(ASMRegister::R10)
+                }
+                _ => {
+                    operand1
+                }
+            };
+
             match operand2 {
                 ASMOperand::Stack(_) | ASMOperand::Data(_) => {
-                    vec![
+                    n_instructions.extend(vec![
                         ASMInstruction::Mov { _type, src: operand2.clone(), dst: ASMOperand::Reg(ASMRegister::R11) },
                         ASMInstruction::Binary { binop, _type, operand1, operand2: ASMOperand::Reg(ASMRegister::R11) },
                         ASMInstruction::Mov { _type, src: ASMOperand::Reg(ASMRegister::R11), dst: operand2.clone() }
-                    ]
+                    ]);
                 }
                 _ => {
-                    vec![instruction]
+                    n_instructions.extend(vec![
+                        ASMInstruction::Binary { binop, _type, operand1, operand2 }
+                    ]);
                 }
             }
+            n_instructions
         }
         ASMInstruction::Binary {
             binop: binop@ (ASMBinaryOperator::ShiftLeft | ASMBinaryOperator::ShiftRight),

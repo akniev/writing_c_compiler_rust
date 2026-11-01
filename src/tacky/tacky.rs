@@ -5,7 +5,6 @@ use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProg
 use crate::common::global_counter::{get_global_counter};
 use crate::parser::parse_switches::SwitchMetadata;
 use crate::parser::typechecker::{StaticInit, Symbol, SymbolAttrs, SymbolInitialValue};
-use crate::parser::typechecker::SymbolAttrs::StaticAttr;
 
 pub fn parse_tacky(
     program: ASTProgram,
@@ -98,30 +97,6 @@ fn parse_function(
         body: function_instructions
     };
     t_function
-}
-
-fn parse_file_variable_declaration(
-    var_decl: &ASTVariableDeclaration,
-    symbols: &HashMap<String, Symbol>,
-) -> TTopLevel {
-    let Some(symbol) = symbols.get(&var_decl.name) else {
-        panic!("Symbol not found!");
-    };
-
-    let init = match symbol.identifier_attrs.get_init() {
-        Some(SymbolInitialValue::Tentative | SymbolInitialValue::NoInitializer) | None => {
-            panic!("Variable is not initialized!");
-        }
-        Some(SymbolInitialValue::Initial(init_val)) => {
-            init_val.clone()
-        }
-    };
-    let static_var = TStaticVariable {
-        name: var_decl.name.clone(),
-        global: symbol.identifier_attrs.is_global(),
-        init,
-    };
-    TTopLevel::StaticVariable(static_var)
 }
 
 fn parse_block(
@@ -466,7 +441,7 @@ fn emit_tacky(
         ASTExpression::FunctionCall { name, args } => {
             let mut args_vec = Vec::new();
             for arg in args {
-                let tmp_var_name = make_temporary(typed_exp.exp_type.clone(), symbols);
+                let tmp_var_name = make_temporary(arg.exp_type.clone(), symbols);
                 let tmp_var = TValue::Var(tmp_var_name);
                 let arg_val = emit_tacky(&arg, instructions, symbols);
                 instructions.push(TInstruction::Copy { src: arg_val, dst: tmp_var.clone() });
@@ -487,9 +462,9 @@ fn emit_tacky(
                 return result;
             }
             let dst_name = make_temporary(typed_exp.exp_type.clone(), symbols);
-            //symbols.add
+
             let dst = TValue::Var(dst_name);
-            if t == ASTType::Long {
+            if target_type == ASTType::Long {
                 instructions.push(TInstruction::SignExtend { src: result, dst: dst.clone() });
             } else {
                 instructions.push(TInstruction::Truncate { src: result, dst: dst.clone() });

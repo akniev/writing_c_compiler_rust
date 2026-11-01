@@ -37,6 +37,22 @@ pub enum ASMType {
     Quadword,
 }
 
+impl ASMType {
+    pub fn standard_suffix(&self) -> &str {
+        match self {
+            ASMType::Longword => "l",
+            ASMType::Quadword => "q",
+        }
+    }
+
+    pub fn reg_size(&self) -> ASMRegSize {
+        match self {
+            ASMType::Longword => ASMRegSize::FourBytes,
+            ASMType::Quadword => ASMRegSize::EightBytes,
+        }
+    }
+}
+
 impl StaticInit {
     pub fn asm_type(&self) -> ASMType {
         match self {
@@ -63,6 +79,13 @@ impl ASMType {
             ASMType::Quadword => 8,
         }
     }
+
+    pub fn size(&self) -> i32 {
+        match self {
+            ASMType::Longword => 4,
+            ASMType::Quadword => 8,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -70,12 +93,6 @@ pub enum ASMTopLevel {
     Function { name: String, global: bool, instructions: Vec<ASMInstruction> },
     StaticVariable { name: String, global: bool, alignment: i32, init: StaticInit },
 }
-
-// #[derive(Debug, PartialEq)]
-// pub struct ASMFunctionDefinition {
-//     pub name: String,
-//     pub instructions: Vec<ASMInstruction>,
-// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMInstruction {
@@ -154,10 +171,6 @@ pub enum ASMRegSize {
 }
 
 impl ASMOperand {
-    pub fn to_string_4b(&self) -> String {
-        self.to_string(ASMRegSize::FourBytes)
-    }
-
     pub fn to_string_8b(&self) -> String {
         self.to_string(ASMRegSize::EightBytes)
     }
@@ -232,8 +245,8 @@ impl ASMRegister {
 impl ASMUnaryOperator {
     pub fn to_string(&self) -> String {
         match self {
-            ASMUnaryOperator::Neg => "negl".to_string(),
-            ASMUnaryOperator::Not => "notl".to_string(),
+            ASMUnaryOperator::Neg => "neg".to_string(),
+            ASMUnaryOperator::Not => "not".to_string(),
         }
     }
 }
@@ -241,14 +254,14 @@ impl ASMUnaryOperator {
 impl ASMBinaryOperator {
     pub fn to_string(&self) -> String {
         match self {
-            ASMBinaryOperator::Add => "addl".to_string(),
-            ASMBinaryOperator::Sub => "subl".to_string(),
-            ASMBinaryOperator::Mult => "imull".to_string(),
-            ASMBinaryOperator::And => "andl".to_string(),
-            ASMBinaryOperator::Or => "orl".to_string(),
-            ASMBinaryOperator::Xor => "xorl".to_string(),
-            ASMBinaryOperator::ShiftLeft => "sall".to_string(),
-            ASMBinaryOperator::ShiftRight => "sarl".to_string(),
+            ASMBinaryOperator::Add => "add".to_string(),
+            ASMBinaryOperator::Sub => "sub".to_string(),
+            ASMBinaryOperator::Mult => "imul".to_string(),
+            ASMBinaryOperator::And => "and".to_string(),
+            ASMBinaryOperator::Or => "or".to_string(),
+            ASMBinaryOperator::Xor => "xor".to_string(),
+            ASMBinaryOperator::ShiftLeft => "sal".to_string(),
+            ASMBinaryOperator::ShiftRight => "sar".to_string(),
         }
     }
 }
@@ -267,8 +280,8 @@ impl ASMInstruction {
         ASMInstruction::Binary {
             binop: ASMBinaryOperator::Add,
             _type: ASMType::Quadword,
-            operand1: ASMOperand::Reg(ASMRegister::SP),
-            operand2: ASMOperand::Imm(bytes),
+            operand1: ASMOperand::Imm(bytes),
+            operand2: ASMOperand::Reg(ASMRegister::SP),
         }
     }
 }

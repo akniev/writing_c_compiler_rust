@@ -746,11 +746,69 @@ impl ASTTypedExpression {
         &self.exp
     }
 
-    pub fn exp_type(&self) -> Option<&ASTType> {
-        self.exp_type.as_ref()
-    }
-
     pub fn with_type(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
         ASTTypedExpression { exp: self.exp.clone(), exp_type }
+    }
+    
+    pub fn casting_to_type(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
+        let Some(exp_type_unwrapped) = exp_type.clone() else {
+            panic!("expected type");
+        };
+
+        if self.exp_type == exp_type {
+            ASTTypedExpression { exp: self.exp.clone(), exp_type }
+        } else {
+            ASTTypedExpression {
+                exp: ASTExpression::Cast {
+                    target_type: exp_type_unwrapped,
+                    exp: Box::new(self.clone()),
+                },
+                exp_type,
+            }
+        }
+    }
+
+    pub fn converting_to(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
+        let exp = self.exp.clone();
+        match exp {
+            ASTExpression::Constant(val) => {
+                ASTTypedExpression {
+                    exp: ASTExpression::Constant(val.converted_to(exp_type.clone())),
+                    exp_type,
+                }
+            }
+            _ => {
+                ASTTypedExpression {
+                    exp: ASTExpression::Cast { target_type: exp_type.clone().unwrap(), exp: Box::new(self.clone()) },
+                    exp_type,
+                }
+            }
+        }
+    }
+}
+
+impl ASTConstant {
+    pub fn converted_to(&self, exp_type: Option<ASTType>) -> ASTConstant {
+        let Some(exp_type) = exp_type else {
+            panic!("No type specified!");
+        };
+
+        match (self, exp_type) {
+            (ASTConstant::Int(_), ASTType::Int) => {
+                self.clone()
+            }
+            (ASTConstant::Long(_), ASTType::Long) => {
+                self.clone()
+            }
+            (ASTConstant::Int(val), ASTType::Long) => {
+                ASTConstant::Long(*val)
+            }
+            (ASTConstant::Long(val), ASTType::Int) => {
+                ASTConstant::Int(*val % i64::from(i32::MAX))
+            }
+            (_, _) => {
+                panic!("Can't convert a constant {:?}", self);
+            }
+        }
     }
 }

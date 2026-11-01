@@ -84,8 +84,15 @@ fn typechecked_function_declaration(
     let mut new_body = None;
 
     if has_body {
-        for param in function_declaration.params.clone() {
-            symbols.insert(param.clone(), Symbol { name: param, _type: ASTType::Int, identifier_attrs: SymbolAttrs::LocalAttr });
+        for (param, param_type) in zip(function_declaration.params.clone(), function_declaration._type.fun_param_types()) {
+            symbols.insert(
+                param.clone(),
+                Symbol {
+                    name: param,
+                    _type: param_type,
+                    identifier_attrs: SymbolAttrs::LocalAttr
+                }
+            );
         }
         let function_info = FunctionInfo {
             name: function_declaration.name.clone(),
@@ -122,7 +129,7 @@ fn typechecked_local_variable_declaration(
                 variable_declaration.name.clone(),
                 Symbol {
                     name: variable_declaration.name.clone(),
-                    _type: ASTType::Int,
+                    _type: variable_declaration._type.clone(),
                     identifier_attrs: SymbolAttrs::StaticAttr {
                         init: SymbolInitialValue::NoInitializer,
                         global: true
@@ -150,7 +157,7 @@ fn typechecked_local_variable_declaration(
             variable_declaration.name.clone(),
             Symbol {
                 name: variable_declaration.name.clone(),
-                _type: ASTType::Int,
+                _type: variable_declaration._type.clone(),
                 identifier_attrs: SymbolAttrs::StaticAttr { init: initial_value, global: false }
             }
         );
@@ -160,12 +167,19 @@ fn typechecked_local_variable_declaration(
                 variable_declaration.clone().name,
                 Symbol {
                     name: variable_declaration.name.clone(),
-                    _type: ASTType::Int,
+                    _type: variable_declaration._type.clone(),
                     identifier_attrs: SymbolAttrs::LocalAttr
                 }
             );
+
         if let Some(init) = variable_declaration.clone().init {
-            t_init = Some(typechecked_expression(init, symbols));
+            t_init = Some(ASTTypedExpression {
+                exp_type: Some(variable_declaration._type.clone()),
+                exp: ASTExpression::Cast {
+                    target_type: variable_declaration._type.clone(),
+                    exp: Box::new(typechecked_expression(init, symbols)),
+                }
+            });
         }
     }
 
@@ -262,8 +276,22 @@ fn typechecked_statement(
             let Some(function_info) = enclosing_function else {
                 panic!("Return statement outside of function");
             };
-            let typechecked_exp = typechecked_expression(exp, symbols).with_type(Some(function_info.return_type.clone()));
-            ASTStatement::Return(typechecked_exp)
+            let typechecked_exp = typechecked_expression(exp, symbols);
+            let Some(exp_type) = typechecked_exp.exp_type.clone() else {
+                panic!("Return statement with no type");
+            };
+
+            if exp_type == function_info.return_type {
+                ASTStatement::Return(typechecked_exp)
+            } else {
+                let cast_exp = ASTExpression::Cast {
+                    target_type: function_info.return_type.clone(),
+                    exp: Box::new(typechecked_exp)
+                }.to_typed(Some(function_info.return_type));
+
+                ASTStatement::Return(cast_exp)
+            }
+
         }
         ASTStatement::Expression(exp) => {
             let typechecked_exp = typechecked_expression(exp, symbols);
@@ -412,7 +440,9 @@ fn typechecked_expression(
         ASTExpression::Binary { op, e1, e2 } => {
             let t_e1 = typechecked_expression(e1.as_ref().clone(), symbols);
             let t_e2 = typechecked_expression(e2.as_ref().clone(), symbols);
-            let common_type = match op {
+
+            let common_type = get_common_type(&t_e1.exp_type, &t_e2.exp_type);
+            let result_type = match op {
                 ASTBinaryOperator::And
                 | ASTBinaryOperator::Or
                 | ASTBinaryOperator::Equal
@@ -423,23 +453,24 @@ fn typechecked_expression(
                 | ASTBinaryOperator::GreaterThanOrEqual => {
                     Some(ASTType::Int)
                 },
-                _ => get_common_type(&t_e1.exp_type, &t_e2.exp_type)
+                _ => common_type.clone(),
             };
+
             let inner_exp = ASTExpression::Binary {
                 op: op.clone(),
-                e1: Box::new(t_e1.with_type(common_type.clone())),
-                e2: Box::new(t_e2.with_type(common_type.clone())),
+                e1: Box::new(t_e1.converting_to(common_type.clone())),
+                e2: Box::new(t_e2.converting_to(common_type.clone())),
             };
             ASTTypedExpression {
                 exp: inner_exp,
-                exp_type: common_type,
+                exp_type: result_type,
             }
         }
         ASTExpression::Assignment { lhs, rhs } => {
             let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
             let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
             let left_type = t_lhs.clone().exp_type;
-            let converted_rhs = t_rhs.with_type(left_type.clone());
+            let converted_rhs = t_rhs.casting_to_type(left_type.clone());
             let assignment_exp = ASTExpression::Assignment { lhs: Box::new(t_lhs.clone()), rhs: Box::new(converted_rhs) };
             ASTTypedExpression {
                 exp: assignment_exp,
@@ -450,7 +481,7 @@ fn typechecked_expression(
             let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
             let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
             let left_type = t_lhs.clone().exp_type;
-            let converted_rhs = t_rhs.with_type(left_type.clone());
+            let converted_rhs = t_rhs.casting_to_type(left_type.clone());
             let exp = ASTExpression::CompoundAssignment { lhs: Box::new(t_lhs), rhs: Box::new(converted_rhs), operator: operator.clone() };
             ASTTypedExpression {
                 exp,
@@ -482,7 +513,14 @@ fn typechecked_expression(
                     let mut converted_args = vec![];
                     for (arg, param_type) in zip(args, param_types) {
                         let t_arg = typechecked_expression(arg.clone(), symbols);
-                        converted_args.push(t_arg.with_type(Some(param_type.as_ref().clone())));
+                        if t_arg.exp_type != Some(param_type.as_ref().clone()) {
+                            converted_args.push(ASTTypedExpression {
+                                exp: ASTExpression::Cast { target_type: param_type.as_ref().clone(), exp: Box::new(t_arg.clone()) },
+                                exp_type: Some(param_type.as_ref().clone()),
+                            });
+                        } else {
+                            converted_args.push(t_arg.with_type(Some(param_type.as_ref().clone())));
+                        }
                     }
                     let call_exp = ASTExpression::FunctionCall {
                         name: name.clone(),
@@ -592,4 +630,13 @@ pub enum StaticInit {
 pub struct FunctionInfo {
     pub name: String,
     pub return_type: ASTType,
+}
+
+impl StaticInit {
+    pub fn value(&self) -> i64 {
+        match self {
+            StaticInit::IntInit(val) => *val as i64,
+            StaticInit::LongInit(val) => *val,
+        }
+    }
 }
