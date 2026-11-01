@@ -461,10 +461,10 @@ impl Parser {
         let next_token = self.peek().unwrap();
         let mut result: ASTTypedExpression;
         match next_token {
-            LexerToken::Const(_) => {
-                let const_token = self.expect(LexerTokenKind::Const);
+            LexerToken::IntConst(_) => {
+                let const_token = self.expect(LexerTokenKind::IntConst);
                 let value = match const_token {
-                    LexerToken::Const(value) => value,
+                    LexerToken::IntConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
                 result = ASTExpression::Constant(ASTConstant::Int(value as i64)).to_typed_without_type();
