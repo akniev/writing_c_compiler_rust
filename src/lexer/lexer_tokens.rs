@@ -1,6 +1,6 @@
 use regex::Regex;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Eq, Debug, Clone, PartialEq, Hash)]
 pub enum LexerToken {
     Identifier(String),
     IntConst(i32),
@@ -229,6 +229,20 @@ impl LexerToken {
 }
 
 impl LexerTokenKind {
+    pub const ALLOWED_TYPE_SPECIFIERS: &[LexerTokenKind] = &[
+        LexerTokenKind::Int,
+        LexerTokenKind::Long,
+        LexerTokenKind::Signed,
+        LexerTokenKind::Unsigned,
+        LexerTokenKind::Static,
+        LexerTokenKind::Extern,
+    ];
+
+    pub const ALLOWED_STORAGE_SPECIFIERS: &[LexerTokenKind] = &[
+        LexerTokenKind::Static,
+        LexerTokenKind::Extern,
+    ];
+
     pub fn pattern(&self) -> Regex {
         Regex::new(match self {
             Self::Identifier => r"^[a-zA-Z_]\w*\b",

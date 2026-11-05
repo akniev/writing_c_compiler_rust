@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::lexer::lexer_tokens::{LexerToken, LexerTokenKind};
 use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTDeclaration, ASTExpression, ASTFunctionDeclaration, ASTPostfixOperator, ASTProgram, ASTStatement, ASTUnaryOperator, ASTForInit, ASTVariableDeclaration, ASTStorageClass, ASTType, ASTConstant, ASTTypedExpression};
 use crate::parser::ast_tokens::ASTExpression::Conditional;
@@ -8,7 +9,7 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
 <function-declaration> ::= { <specifier> }+ <identifier> "(" <param-list> ")" ( <block> | ";" )
 <param-list> ::= "void"
                | {<type-specifier>}+ <identifier> { "," {<type-specifier>}+ <identifier> }
-<type-specifier> ::= "int" | "long"
+<type-specifier> ::= "int" | "long" | "unsigned" | "signed"
 <specifier> ::= <type-specifier> | "static" | "extern"
 <function> ::= "int" <identifier> "(" "void" ")" <block>
 <block> ::= "{" { <block-item> } "}"
@@ -41,10 +42,12 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
 <unop> ::= "-" | "~" | "++" | "--"
 <postfix> ::= ++ | --
 <binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">=" | = | += | -= | *= | /= | %=
-<const> ::= <int> | <long>
+<const> ::= <int> | <long> | <uint> | <ulong>
 <identifier> ::= ? An identifier token ?
 <int> ::= ? An int token ?
 <long> ::= ? A int or long token ?
+<uint> ::= ? An unsigned int token ?
+<ulong> ::= ? An unsigned long token ?
  */
 
 struct Parser {
@@ -83,20 +86,14 @@ impl Parser {
     fn parse_specifiers(&mut self) -> (ASTType, Option<ASTStorageClass>) {
         let mut type_specifiers = vec![];
         let mut storage_specifiers = vec![];
-        let allowed_specifiers = vec![
-            LexerTokenKind::Int,
-            LexerTokenKind::Long,
-            LexerTokenKind::Static,
-            LexerTokenKind::Extern,
-        ];
 
         while let Some(token) = self.peek() {
-            if !allowed_specifiers.contains(&token.kind()) {
+            if !LexerTokenKind::ALLOWED_TYPE_SPECIFIERS.contains(&token.kind()) {
                 break;
             }
 
             match token {
-                LexerToken::Int | LexerToken::Long => {
+                LexerToken::Int | LexerToken::Long | LexerToken::Unsigned | LexerToken::Signed => {
                     self.take();
                     type_specifiers.push(token);
                 }
@@ -108,19 +105,27 @@ impl Parser {
             }
         }
 
-        if type_specifiers.is_empty() || type_specifiers.len() > 2 {
+        if type_specifiers.is_empty() || Parser::contain_duplicates(&type_specifiers) {
             panic!("Invalid type specifier");
         }
+
+        if type_specifiers.contains(&LexerToken::Signed) && type_specifiers.contains(&LexerToken::Unsigned) {
+            panic!("Invalid type specifier");
+        }
+
+        let _type = if type_specifiers.contains(&LexerToken::Unsigned) && type_specifiers.contains(&LexerToken::Long) {
+            ASTType::ULong
+        } else if type_specifiers.contains(&LexerToken::Unsigned) {
+            ASTType::UInt
+        } else if type_specifiers.contains(&LexerToken::Long) {
+            ASTType::Long
+        } else {
+            ASTType::Int
+        };
 
         if storage_specifiers.len() > 1 {
             panic!("Invalid storage class");
         }
-
-        let _type = match type_specifiers.as_slice() {
-            [LexerToken::Int] => ASTType::Int,
-            [LexerToken::Long] | [LexerToken::Int, LexerToken::Long] | [LexerToken::Long, LexerToken::Int] => ASTType::Long,
-            _ => unreachable!("Invalid type specifier"),
-        };
 
         let storage_class = if storage_specifiers.len() == 1 {
             Some(self.parse_storage_class(&storage_specifiers[0]))
@@ -184,15 +189,12 @@ impl Parser {
 
     fn parse_block_item(&mut self) -> ASTBlockItem {
         let next_token = self.peek().unwrap();
-        match next_token {
-            LexerToken::Int | LexerToken::Long | LexerToken::Static | LexerToken::Extern => { // Block item is a declaration
-                let declaration = self.parse_declaration();
-                ASTBlockItem::Declaration(declaration)
-            }
-            _ => { // Block item is a statement
-                let statement = self.parse_statement();
-                ASTBlockItem::Statement(statement)
-            }
+        if LexerTokenKind::ALLOWED_TYPE_SPECIFIERS.contains(&next_token.kind()) {
+            let declaration = self.parse_declaration();
+            ASTBlockItem::Declaration(declaration)
+        } else {
+            let statement = self.parse_statement();
+            ASTBlockItem::Statement(statement)
         }
     }
 
@@ -210,14 +212,14 @@ impl Parser {
             self.take();
             return params;
         }
-        let p1_type = self.parse_type();
+        let p1_type = self.parse_param_type();
         let LexerToken::Identifier(p1) = self.expect(LexerTokenKind::Identifier) else {
             panic!("expected identifier");
         };
         params.push((p1_type, p1));
         while self.peek() != Some(LexerToken::CloseParen) {
             self.expect(LexerTokenKind::Comma);
-            let pn_type = self.parse_type();
+            let pn_type = self.parse_param_type();
             let LexerToken::Identifier(pn) = self.expect(LexerTokenKind::Identifier) else {
                 panic!("expected identifier");
             };
@@ -226,30 +228,12 @@ impl Parser {
         params
     }
 
-    fn parse_type(&mut self) -> ASTType {
-        let allowed_specifiers = vec![
-            LexerTokenKind::Int,
-            LexerTokenKind::Long,
-            LexerTokenKind::Static,
-            LexerTokenKind::Extern,
-        ];
-
-        let mut type_specifiers = vec![];
-
-        while let Some(token) = self.peek() && allowed_specifiers.contains(&token.kind()) {
-            type_specifiers.push(token);
-            self.take();
+    fn parse_param_type(&mut self) -> ASTType {
+        let (_type, storage_specifiers) = self.parse_specifiers();
+        if storage_specifiers != None {
+            panic!("Invalid storage specifier");
         }
-
-        if type_specifiers.is_empty() || type_specifiers.len() > 2 {
-            panic!("Invalid type specifier");
-        }
-
-        match type_specifiers.as_slice() {
-            [LexerToken::Int] => ASTType::Int,
-            [LexerToken::Long] | [LexerToken::Int, LexerToken::Long] | [LexerToken::Long, LexerToken::Int] => ASTType::Long,
-            _ => unreachable!("Invalid type specifier"),
-        }
+        _type
     }
 
     fn parse_statement(&mut self) -> ASTStatement {
@@ -477,6 +461,22 @@ impl Parser {
                 };
                 result = ASTExpression::Constant(ASTConstant::Long(value)).to_typed_without_type();
             }
+            LexerToken::UIntConst(u32) => {
+                let const_token = self.expect(LexerTokenKind::UIntConst);
+                let value = match const_token {
+                    LexerToken::UIntConst(value) => value,
+                    _ => unreachable!("expected constant, found {const_token:?}"),
+                };
+                result = ASTExpression::Constant(ASTConstant::UInt(value as u64)).to_typed_without_type();
+            }
+            LexerToken::ULongConst(u64) => {
+                let const_token = self.expect(LexerTokenKind::ULongConst);
+                let value = match const_token {
+                    LexerToken::ULongConst(value) => value,
+                    _ => unreachable!("expected constant, found {const_token:?}"),
+                };
+                result = ASTExpression::Constant(ASTConstant::UInt(value)).to_typed_without_type();
+            }
             LexerToken::Identifier(_) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
                 let function_call = self.parse_function_call();
                 result = function_call;
@@ -492,7 +492,7 @@ impl Parser {
             }
             LexerToken::OpenParen if self.peek_n(1).unwrap().kind().is_type_token() => {
                 self.take();
-                let _type = self.parse_type();
+                let _type = self.parse_param_type();
                 self.expect(LexerTokenKind::CloseParen);
                 let factor = self.parse_factor();
                 result = ASTExpression::Cast { target_type: _type, exp: Box::new(factor) }.to_typed_without_type();
@@ -701,6 +701,11 @@ impl Parser {
     fn peek_n(&mut self, n: usize) -> Option<LexerToken> {
         self.tokens.get(self.cursor + n).cloned()
     }
+
+    fn contain_duplicates<T: Eq + std::hash::Hash>(list: &Vec<T>) -> bool {
+        let mut seen = HashSet::new();
+        list.iter().any(|x| !seen.insert(x))
+    }
 }
 
 pub fn parse(tokens: Vec<LexerToken>) -> ASTProgram {
@@ -714,10 +719,7 @@ pub fn parse(tokens: Vec<LexerToken>) -> ASTProgram {
 
 impl LexerTokenKind {
     fn is_type_token(self) -> bool {
-        match self {
-            LexerTokenKind::Int | LexerTokenKind::Long => true,
-            _ => false,
-        }
+        Self::ALLOWED_TYPE_SPECIFIERS.contains(&self) && !Self::ALLOWED_STORAGE_SPECIFIERS.contains(&self)
     }
 
     fn is_storage_class_token(self) -> bool {
@@ -749,7 +751,7 @@ impl ASTTypedExpression {
     pub fn with_type(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
         ASTTypedExpression { exp: self.exp.clone(), exp_type }
     }
-    
+
     pub fn casting_to_type(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
         let Some(exp_type_unwrapped) = exp_type.clone() else {
             panic!("expected type");

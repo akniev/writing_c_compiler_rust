@@ -114,139 +114,141 @@ fn typechecked_local_variable_declaration(
     variable_declaration: &ASTVariableDeclaration,
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTVariableDeclaration {
-    let mut t_init = None;
-    if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-        if variable_declaration.init.is_some() {
-            panic!("Initializer on local extern variable declaration");
-        }
-        if symbols.contains_key(&variable_declaration.name.clone()) {
-            let old_decl = symbols.get(&variable_declaration.name).unwrap();
-            if old_decl._type != variable_declaration._type {
-                panic!("Invalid redeclaration");
-            }
-        } else {
-            symbols.insert(
-                variable_declaration.name.clone(),
-                Symbol {
-                    name: variable_declaration.name.clone(),
-                    _type: variable_declaration._type.clone(),
-                    identifier_attrs: SymbolAttrs::StaticAttr {
-                        init: SymbolInitialValue::NoInitializer,
-                        global: true
-                    }
-                }
-            );
-        }
-    } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
-        let initial_value = if let Some(unwrapped) = variable_declaration.clone().init
-            && let ASTExpression::Constant(init_val) = unwrapped.exp() {
-            match init_val {
-                ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
-                ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
-            }
-        } else if variable_declaration.init.is_none() {
-            match variable_declaration.clone()._type {
-                ASTType::Int => SymbolInitialValue::Initial(StaticInit::IntInit(0)),
-                ASTType::Long => SymbolInitialValue::Initial(StaticInit::LongInit(0)),
-                _ => panic!("Non-constant initializer on local static variable")
-            }
-        } else {
-            panic!("Non-constant initializer on local static variable")
-        };
-        symbols.insert(
-            variable_declaration.name.clone(),
-            Symbol {
-                name: variable_declaration.name.clone(),
-                _type: variable_declaration._type.clone(),
-                identifier_attrs: SymbolAttrs::StaticAttr { init: initial_value, global: false }
-            }
-        );
-    } else {
-        symbols
-            .insert(
-                variable_declaration.clone().name,
-                Symbol {
-                    name: variable_declaration.name.clone(),
-                    _type: variable_declaration._type.clone(),
-                    identifier_attrs: SymbolAttrs::LocalAttr
-                }
-            );
-
-        if let Some(init) = variable_declaration.clone().init {
-            t_init = Some(ASTTypedExpression {
-                exp_type: Some(variable_declaration._type.clone()),
-                exp: ASTExpression::Cast {
-                    target_type: variable_declaration._type.clone(),
-                    exp: Box::new(typechecked_expression(init, symbols)),
-                }
-            });
-        }
-    }
-
-    ASTVariableDeclaration {
-        name: variable_declaration.name.clone(),
-        _type: variable_declaration._type.clone(),
-        storage_class: variable_declaration.storage_class.clone(),
-        init: t_init,
-    }
+    panic!("Not implemented");
+    // let mut t_init = None;
+    // if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //     if variable_declaration.init.is_some() {
+    //         panic!("Initializer on local extern variable declaration");
+    //     }
+    //     if symbols.contains_key(&variable_declaration.name.clone()) {
+    //         let old_decl = symbols.get(&variable_declaration.name).unwrap();
+    //         if old_decl._type != variable_declaration._type {
+    //             panic!("Invalid redeclaration");
+    //         }
+    //     } else {
+    //         symbols.insert(
+    //             variable_declaration.name.clone(),
+    //             Symbol {
+    //                 name: variable_declaration.name.clone(),
+    //                 _type: variable_declaration._type.clone(),
+    //                 identifier_attrs: SymbolAttrs::StaticAttr {
+    //                     init: SymbolInitialValue::NoInitializer,
+    //                     global: true
+    //                 }
+    //             }
+    //         );
+    //     }
+    // } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
+    //     let initial_value = if let Some(unwrapped) = variable_declaration.clone().init
+    //         && let ASTExpression::Constant(init_val) = unwrapped.exp() {
+    //         match init_val {
+    //             ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
+    //             ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
+    //         }
+    //     } else if variable_declaration.init.is_none() {
+    //         match variable_declaration.clone()._type {
+    //             ASTType::Int => SymbolInitialValue::Initial(StaticInit::IntInit(0)),
+    //             ASTType::Long => SymbolInitialValue::Initial(StaticInit::LongInit(0)),
+    //             _ => panic!("Non-constant initializer on local static variable")
+    //         }
+    //     } else {
+    //         panic!("Non-constant initializer on local static variable")
+    //     };
+    //     symbols.insert(
+    //         variable_declaration.name.clone(),
+    //         Symbol {
+    //             name: variable_declaration.name.clone(),
+    //             _type: variable_declaration._type.clone(),
+    //             identifier_attrs: SymbolAttrs::StaticAttr { init: initial_value, global: false }
+    //         }
+    //     );
+    // } else {
+    //     symbols
+    //         .insert(
+    //             variable_declaration.clone().name,
+    //             Symbol {
+    //                 name: variable_declaration.name.clone(),
+    //                 _type: variable_declaration._type.clone(),
+    //                 identifier_attrs: SymbolAttrs::LocalAttr
+    //             }
+    //         );
+    // 
+    //     if let Some(init) = variable_declaration.clone().init {
+    //         t_init = Some(ASTTypedExpression {
+    //             exp_type: Some(variable_declaration._type.clone()),
+    //             exp: ASTExpression::Cast {
+    //                 target_type: variable_declaration._type.clone(),
+    //                 exp: Box::new(typechecked_expression(init, symbols)),
+    //             }
+    //         });
+    //     }
+    // }
+    // 
+    // ASTVariableDeclaration {
+    //     name: variable_declaration.name.clone(),
+    //     _type: variable_declaration._type.clone(),
+    //     storage_class: variable_declaration.storage_class.clone(),
+    //     init: t_init,
+    // }
 }
 
 fn typechecked_file_scope_variable_declaration(
     variable_declaration: &ASTVariableDeclaration,
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTVariableDeclaration {
-    let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.clone().init.map(|e| e.exp().clone()) {
-        match init_value {
-            ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
-            ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
-        }
-    } else if variable_declaration.init.is_none() {
-        if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-            SymbolInitialValue::NoInitializer
-        } else {
-            SymbolInitialValue::Tentative
-        }
-    } else {
-        panic!("Non-constant initializer!")
-    };
-
-    let mut global = variable_declaration.storage_class != Some(ASTStorageClass::Static);
-
-    if symbols.contains_key(&variable_declaration.name) {
-        let old_decl = symbols.get(&variable_declaration.name).unwrap();
-        if old_decl._type != variable_declaration._type {
-            panic!("Invalid redeclaration of variable");
-        }
-        if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
-            global = old_decl.identifier_attrs.is_global();
-        } else if old_decl.identifier_attrs.is_global() != global {
-            panic!("Conflicting variable linkage")
-        }
-
-        let old_init = old_decl.identifier_attrs.get_init();
-
-        if matches!(old_init, Some(SymbolInitialValue::Initial(_))) {
-            if matches!(initial_value, SymbolInitialValue::Initial(_)) {
-                panic!("Conflicting file scope variable definitions");
-            } else {
-                initial_value = old_init.unwrap();
-            }
-        } else if !matches!(initial_value, SymbolInitialValue::Initial(_)) && matches!(old_init, Some(SymbolInitialValue::Tentative)) {
-            initial_value = SymbolInitialValue::Tentative;
-        }
-    }
-
-    let attrs = SymbolAttrs::StaticAttr { init: initial_value, global };
-    symbols.insert(
-        variable_declaration.name.clone(),
-        Symbol {
-            name: variable_declaration.name.clone(),
-            _type: variable_declaration._type.clone(),
-            identifier_attrs: attrs
-        }
-    );
-
-    variable_declaration.clone()
+    panic!("Not implemented");
+    // let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.clone().init.map(|e| e.exp().clone()) {
+    //     match init_value {
+    //         ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
+    //         ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
+    //     }
+    // } else if variable_declaration.init.is_none() {
+    //     if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //         SymbolInitialValue::NoInitializer
+    //     } else {
+    //         SymbolInitialValue::Tentative
+    //     }
+    // } else {
+    //     panic!("Non-constant initializer!")
+    // };
+    // 
+    // let mut global = variable_declaration.storage_class != Some(ASTStorageClass::Static);
+    // 
+    // if symbols.contains_key(&variable_declaration.name) {
+    //     let old_decl = symbols.get(&variable_declaration.name).unwrap();
+    //     if old_decl._type != variable_declaration._type {
+    //         panic!("Invalid redeclaration of variable");
+    //     }
+    //     if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
+    //         global = old_decl.identifier_attrs.is_global();
+    //     } else if old_decl.identifier_attrs.is_global() != global {
+    //         panic!("Conflicting variable linkage")
+    //     }
+    // 
+    //     let old_init = old_decl.identifier_attrs.get_init();
+    // 
+    //     if matches!(old_init, Some(SymbolInitialValue::Initial(_))) {
+    //         if matches!(initial_value, SymbolInitialValue::Initial(_)) {
+    //             panic!("Conflicting file scope variable definitions");
+    //         } else {
+    //             initial_value = old_init.unwrap();
+    //         }
+    //     } else if !matches!(initial_value, SymbolInitialValue::Initial(_)) && matches!(old_init, Some(SymbolInitialValue::Tentative)) {
+    //         initial_value = SymbolInitialValue::Tentative;
+    //     }
+    // }
+    // 
+    // let attrs = SymbolAttrs::StaticAttr { init: initial_value, global };
+    // symbols.insert(
+    //     variable_declaration.name.clone(),
+    //     Symbol {
+    //         name: variable_declaration.name.clone(),
+    //         _type: variable_declaration._type.clone(),
+    //         identifier_attrs: attrs
+    //     }
+    // );
+    // 
+    // variable_declaration.clone()
 }
 
 fn typechecked_block(block: ASTBlock, symbols: &mut HashMap<String, Symbol>, enclosing_function: Option<FunctionInfo>) -> ASTBlock {
@@ -400,149 +402,150 @@ fn typechecked_expression(
     expression: ASTTypedExpression,
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTTypedExpression {
-    match expression.exp() {
-        ASTExpression::Var(name) => {
-            let Some(symbol) = symbols.get(name) else {
-                panic!("{} is not defined", name);
-            };
-            if symbol._type.is_function_type() {
-                panic!("{} is not a constant", name);
-            }
-            expression.with_type(Some(symbol.clone()._type))
-        }
-        ASTExpression::Constant(c) => {
-            let c_type = match c {
-                ASTConstant::Int(_) => ASTType::Int,
-                ASTConstant::Long(_) => ASTType::Long,
-            };
-            expression.with_type(Some(c_type))
-        }
-        ASTExpression::Unary { op, exp } => {
-            let t_inner_exp = typechecked_expression(exp.as_ref().clone(), symbols);
-            let n_exp = ASTExpression::Unary { op: op.clone(), exp: Box::new(t_inner_exp.clone()) };
-            let exp_type = match op {
-                ASTUnaryOperator::Not => Some(ASTType::Int),
-                _ => t_inner_exp.exp_type,
-            };
-            ASTTypedExpression {
-                exp: n_exp,
-                exp_type,
-            }
-        }
-        ASTExpression::Postfix { op, exp } => {
-            let t_inner_exp = typechecked_expression(exp.as_ref().clone(), symbols);
-            let n_exp = ASTExpression::Postfix { op: op.clone(), exp: Box::new(t_inner_exp.clone()) };
-            ASTTypedExpression {
-                exp: n_exp,
-                exp_type: t_inner_exp.exp_type,
-            }
-        }
-        ASTExpression::Binary { op, e1, e2 } => {
-            let t_e1 = typechecked_expression(e1.as_ref().clone(), symbols);
-            let t_e2 = typechecked_expression(e2.as_ref().clone(), symbols);
-
-            let common_type = get_common_type(&t_e1.exp_type, &t_e2.exp_type);
-            let result_type = match op {
-                ASTBinaryOperator::And
-                | ASTBinaryOperator::Or
-                | ASTBinaryOperator::Equal
-                | ASTBinaryOperator::NotEqual
-                | ASTBinaryOperator::LessThan
-                | ASTBinaryOperator::GreaterThan
-                | ASTBinaryOperator::LessThanOrEqual
-                | ASTBinaryOperator::GreaterThanOrEqual => {
-                    Some(ASTType::Int)
-                },
-                _ => common_type.clone(),
-            };
-
-            let inner_exp = ASTExpression::Binary {
-                op: op.clone(),
-                e1: Box::new(t_e1.converting_to(common_type.clone())),
-                e2: Box::new(t_e2.converting_to(common_type.clone())),
-            };
-            ASTTypedExpression {
-                exp: inner_exp,
-                exp_type: result_type,
-            }
-        }
-        ASTExpression::Assignment { lhs, rhs } => {
-            let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
-            let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
-            let left_type = t_lhs.clone().exp_type;
-            let converted_rhs = t_rhs.casting_to_type(left_type.clone());
-            let assignment_exp = ASTExpression::Assignment { lhs: Box::new(t_lhs.clone()), rhs: Box::new(converted_rhs) };
-            ASTTypedExpression {
-                exp: assignment_exp,
-                exp_type: left_type,
-            }
-        }
-        ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
-            let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
-            let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
-            let left_type = t_lhs.clone().exp_type;
-            let converted_rhs = t_rhs.casting_to_type(left_type.clone());
-            let exp = ASTExpression::CompoundAssignment { lhs: Box::new(t_lhs), rhs: Box::new(converted_rhs), operator: operator.clone() };
-            ASTTypedExpression {
-                exp,
-                exp_type: left_type,
-            }
-        }
-        ASTExpression::Conditional { condition, if_true, if_false } => {
-            let t_cond = typechecked_expression(condition.as_ref().clone(), symbols);
-            let t_if_true = typechecked_expression(if_true.as_ref().clone(), symbols);
-            let t_if_false = typechecked_expression(if_false.as_ref().clone(), symbols);
-            let common_type = get_common_type(&t_if_true.exp_type, &t_if_false.exp_type);
-            let inner_exp = ASTExpression::Conditional {
-                condition: Box::new(t_cond),
-                if_true: Box::new(t_if_true.with_type(common_type.clone())),
-                if_false: Box::new(t_if_false.with_type(common_type.clone())),
-            };
-            ASTTypedExpression {
-                exp: inner_exp,
-                exp_type: common_type,
-            }
-        }
-        ASTExpression::FunctionCall { name, args } => {
-            let f_type = symbols.get(name).unwrap().clone()._type;
-            match f_type {
-                ASTType::FunType(param_types, return_type) => {
-                    if param_types.len() != args.len() {
-                        panic!("{} expects {} arguments, got {}", name, param_types.len(), args.len());
-                    }
-                    let mut converted_args = vec![];
-                    for (arg, param_type) in zip(args, param_types) {
-                        let t_arg = typechecked_expression(arg.clone(), symbols);
-                        if t_arg.exp_type != Some(param_type.as_ref().clone()) {
-                            converted_args.push(ASTTypedExpression {
-                                exp: ASTExpression::Cast { target_type: param_type.as_ref().clone(), exp: Box::new(t_arg.clone()) },
-                                exp_type: Some(param_type.as_ref().clone()),
-                            });
-                        } else {
-                            converted_args.push(t_arg.with_type(Some(param_type.as_ref().clone())));
-                        }
-                    }
-                    let call_exp = ASTExpression::FunctionCall {
-                        name: name.clone(),
-                        args: converted_args,
-                    };
-                    ASTTypedExpression {
-                        exp: call_exp,
-                        exp_type: Some(return_type.as_ref().clone()),
-                    }
-                }
-                _ => panic!("{} is not a function", name),
-            }
-        }
-        ASTExpression::Cast { target_type, exp } => {
-            let t_exp = typechecked_expression(exp.as_ref().clone(), symbols);
-            let inner_exp = ASTExpression::Cast {
-                target_type: target_type.clone(),
-                exp: Box::new(t_exp.clone()),
-            };
-            inner_exp.to_typed(Some(target_type.clone()))
-        }
-    }
+    panic!("Not implemented");
+    // match expression.exp() {
+    //     ASTExpression::Var(name) => {
+    //         let Some(symbol) = symbols.get(name) else {
+    //             panic!("{} is not defined", name);
+    //         };
+    //         if symbol._type.is_function_type() {
+    //             panic!("{} is not a constant", name);
+    //         }
+    //         expression.with_type(Some(symbol.clone()._type))
+    //     }
+    //     ASTExpression::Constant(c) => {
+    //         let c_type = match c {
+    //             ASTConstant::Int(_) => ASTType::Int,
+    //             ASTConstant::Long(_) => ASTType::Long,
+    //         };
+    //         expression.with_type(Some(c_type))
+    //     }
+    //     ASTExpression::Unary { op, exp } => {
+    //         let t_inner_exp = typechecked_expression(exp.as_ref().clone(), symbols);
+    //         let n_exp = ASTExpression::Unary { op: op.clone(), exp: Box::new(t_inner_exp.clone()) };
+    //         let exp_type = match op {
+    //             ASTUnaryOperator::Not => Some(ASTType::Int),
+    //             _ => t_inner_exp.exp_type,
+    //         };
+    //         ASTTypedExpression {
+    //             exp: n_exp,
+    //             exp_type,
+    //         }
+    //     }
+    //     ASTExpression::Postfix { op, exp } => {
+    //         let t_inner_exp = typechecked_expression(exp.as_ref().clone(), symbols);
+    //         let n_exp = ASTExpression::Postfix { op: op.clone(), exp: Box::new(t_inner_exp.clone()) };
+    //         ASTTypedExpression {
+    //             exp: n_exp,
+    //             exp_type: t_inner_exp.exp_type,
+    //         }
+    //     }
+    //     ASTExpression::Binary { op, e1, e2 } => {
+    //         let t_e1 = typechecked_expression(e1.as_ref().clone(), symbols);
+    //         let t_e2 = typechecked_expression(e2.as_ref().clone(), symbols);
+    // 
+    //         let common_type = get_common_type(&t_e1.exp_type, &t_e2.exp_type);
+    //         let result_type = match op {
+    //             ASTBinaryOperator::And
+    //             | ASTBinaryOperator::Or
+    //             | ASTBinaryOperator::Equal
+    //             | ASTBinaryOperator::NotEqual
+    //             | ASTBinaryOperator::LessThan
+    //             | ASTBinaryOperator::GreaterThan
+    //             | ASTBinaryOperator::LessThanOrEqual
+    //             | ASTBinaryOperator::GreaterThanOrEqual => {
+    //                 Some(ASTType::Int)
+    //             },
+    //             _ => common_type.clone(),
+    //         };
+    // 
+    //         let inner_exp = ASTExpression::Binary {
+    //             op: op.clone(),
+    //             e1: Box::new(t_e1.converting_to(common_type.clone())),
+    //             e2: Box::new(t_e2.converting_to(common_type.clone())),
+    //         };
+    //         ASTTypedExpression {
+    //             exp: inner_exp,
+    //             exp_type: result_type,
+    //         }
+    //     }
+    //     ASTExpression::Assignment { lhs, rhs } => {
+    //         let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
+    //         let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
+    //         let left_type = t_lhs.clone().exp_type;
+    //         let converted_rhs = t_rhs.casting_to_type(left_type.clone());
+    //         let assignment_exp = ASTExpression::Assignment { lhs: Box::new(t_lhs.clone()), rhs: Box::new(converted_rhs) };
+    //         ASTTypedExpression {
+    //             exp: assignment_exp,
+    //             exp_type: left_type,
+    //         }
+    //     }
+    //     ASTExpression::CompoundAssignment { lhs, rhs, operator } => {
+    //         let t_lhs = typechecked_expression(lhs.as_ref().clone(), symbols);
+    //         let t_rhs = typechecked_expression(rhs.as_ref().clone(), symbols);
+    //         let left_type = t_lhs.clone().exp_type;
+    //         let converted_rhs = t_rhs.casting_to_type(left_type.clone());
+    //         let exp = ASTExpression::CompoundAssignment { lhs: Box::new(t_lhs), rhs: Box::new(converted_rhs), operator: operator.clone() };
+    //         ASTTypedExpression {
+    //             exp,
+    //             exp_type: left_type,
+    //         }
+    //     }
+    //     ASTExpression::Conditional { condition, if_true, if_false } => {
+    //         let t_cond = typechecked_expression(condition.as_ref().clone(), symbols);
+    //         let t_if_true = typechecked_expression(if_true.as_ref().clone(), symbols);
+    //         let t_if_false = typechecked_expression(if_false.as_ref().clone(), symbols);
+    //         let common_type = get_common_type(&t_if_true.exp_type, &t_if_false.exp_type);
+    //         let inner_exp = ASTExpression::Conditional {
+    //             condition: Box::new(t_cond),
+    //             if_true: Box::new(t_if_true.with_type(common_type.clone())),
+    //             if_false: Box::new(t_if_false.with_type(common_type.clone())),
+    //         };
+    //         ASTTypedExpression {
+    //             exp: inner_exp,
+    //             exp_type: common_type,
+    //         }
+    //     }
+    //     ASTExpression::FunctionCall { name, args } => {
+    //         let f_type = symbols.get(name).unwrap().clone()._type;
+    //         match f_type {
+    //             ASTType::FunType(param_types, return_type) => {
+    //                 if param_types.len() != args.len() {
+    //                     panic!("{} expects {} arguments, got {}", name, param_types.len(), args.len());
+    //                 }
+    //                 let mut converted_args = vec![];
+    //                 for (arg, param_type) in zip(args, param_types) {
+    //                     let t_arg = typechecked_expression(arg.clone(), symbols);
+    //                     if t_arg.exp_type != Some(param_type.as_ref().clone()) {
+    //                         converted_args.push(ASTTypedExpression {
+    //                             exp: ASTExpression::Cast { target_type: param_type.as_ref().clone(), exp: Box::new(t_arg.clone()) },
+    //                             exp_type: Some(param_type.as_ref().clone()),
+    //                         });
+    //                     } else {
+    //                         converted_args.push(t_arg.with_type(Some(param_type.as_ref().clone())));
+    //                     }
+    //                 }
+    //                 let call_exp = ASTExpression::FunctionCall {
+    //                     name: name.clone(),
+    //                     args: converted_args,
+    //                 };
+    //                 ASTTypedExpression {
+    //                     exp: call_exp,
+    //                     exp_type: Some(return_type.as_ref().clone()),
+    //                 }
+    //             }
+    //             _ => panic!("{} is not a function", name),
+    //         }
+    //     }
+    //     ASTExpression::Cast { target_type, exp } => {
+    //         let t_exp = typechecked_expression(exp.as_ref().clone(), symbols);
+    //         let inner_exp = ASTExpression::Cast {
+    //             target_type: target_type.clone(),
+    //             exp: Box::new(t_exp.clone()),
+    //         };
+    //         inner_exp.to_typed(Some(target_type.clone()))
+    //     }
+    // }
 }
 
 

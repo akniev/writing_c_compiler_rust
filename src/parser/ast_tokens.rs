@@ -8,7 +8,7 @@ variable_declaration = (identifier name, typed_exp? init,
                         type var_type, storage_class?)
 function_declaration = (identifier name, identifier* params, block? body,
                         type fun_type, storage_class?)
-type = Int | Long | FunType(type* params, type ret)
+type = Int | Long | UInt | ULong | FunType(type* params, type ret)
 storage_class = Static | Extern
 for_init = InitDecl(variable_declaration) | InitExp(typed_exp?)
 statement = Return(typed_exp)
@@ -42,7 +42,7 @@ binary_operator = Add | Subtract | Multiply | Divide | Remainder
                 | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft
                 | ShiftRight | And | Or | Equal | NotEqual | LessThan
                 | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
-const = ConstInt(int) | ConstLong(int)
+const = ConstInt(int) | ConstLong(int) | ConstUInt(int) | ConstULong(int)
  */
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,6 +71,8 @@ pub struct ASTVariableDeclaration {
 pub enum ASTType {
     Int,
     Long,
+    UInt,
+    ULong,
     FunType(Vec<Box<ASTType>>, Box<ASTType>),
 }
 
@@ -88,7 +90,7 @@ impl ASTType {
             _ => panic!("Not a function type!"),
         }
     }
-    
+
     pub fn fun_param_types(&self) -> Vec<ASTType> {
         match self {
             ASTType::FunType(params, _) => params.iter().map(|t| t.as_ref().clone()).collect(),
@@ -175,6 +177,8 @@ pub enum ASTExpression {
 pub enum ASTConstant {
     Int(i64),
     Long(i64),
+    UInt(u64),
+    ULong(u64),
 }
 
 impl ASTConstant {
@@ -182,6 +186,8 @@ impl ASTConstant {
         match t {
             ASTType::Int => ASTConstant::Int(i),
             ASTType::Long => ASTConstant::Long(i),
+            ASTType::UInt => ASTConstant::UInt(i as u64),
+            ASTType::ULong => ASTConstant::ULong(i as u64),
             ASTType::FunType(_, _) => panic!("Function type is not supported!"),
         }
     }

@@ -64,11 +64,12 @@ impl StaticInit {
 
 impl ASTType {
     pub fn asm_type(&self) -> ASMType {
-        match self {
-            ASTType::Int => ASMType::Longword,
-            ASTType::Long => ASMType::Quadword,
-            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
-        }
+        panic!("Not implemented");
+        // match self {
+        //     ASTType::Int => ASMType::Longword,
+        //     ASTType::Long => ASMType::Quadword,
+        //     ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+        // }
     }
 }
 

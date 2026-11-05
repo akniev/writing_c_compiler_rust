@@ -362,41 +362,44 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
 }
 
 fn get_tvalue_type(value: &TValue, symbols: &HashMap<String, Symbol>) -> ASMType {
-    match value {
-        TValue::Constant(ast_const) => {
-            match ast_const {
-                ASTConstant::Int(_) => ASMType::Longword,
-                ASTConstant::Long(_) => ASMType::Quadword,
-            }
-        }
-        TValue::Var(name) => {
-            symbols[name]._type.asm_type()
-        }
-    }
+    panic!("Not implemented");
+    // match value {
+    //     TValue::Constant(ast_const) => {
+    //         match ast_const {
+    //             ASTConstant::Int(_) => ASMType::Longword,
+    //             ASTConstant::Long(_) => ASMType::Quadword,
+    //         }
+    //     }
+    //     TValue::Var(name) => {
+    //         symbols[name]._type.asm_type()
+    //     }
+    // }
 }
 
 impl TValue {
     pub fn to_operand(&self) -> ASMOperand {
-        match self {
-            TValue::Constant(value) => {
-                let value = match value {
-                    ASTConstant::Int(value) => value,
-                    ASTConstant::Long(value) => value,
-                };
-                ASMOperand::Imm(value.clone())
-            },
-            TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
-        }
+        panic!("Not implemented");
+        // match self {
+        //     TValue::Constant(value) => {
+        //         let value = match value {
+        //             ASTConstant::Int(value) => value,
+        //             ASTConstant::Long(value) => value,
+        //         };
+        //         ASMOperand::Imm(value.clone())
+        //     },
+        //     TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
+        // }
     }
 }
 
 impl TUnaryOperator {
     pub fn to_operator(&self) -> ASMUnaryOperator {
-        match self {
-            TUnaryOperator::Complement => ASMUnaryOperator::Not,
-            TUnaryOperator::Negate => ASMUnaryOperator::Neg,
-            _ => panic!("Unsupported unary operator"),
-        }
+        panic!("Not implemented");
+        // match self {
+        //     TUnaryOperator::Complement => ASMUnaryOperator::Not,
+        //     TUnaryOperator::Negate => ASMUnaryOperator::Neg,
+        //     _ => panic!("Unsupported unary operator"),
+        // }
     }
 }
 

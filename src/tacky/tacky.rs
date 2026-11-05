@@ -38,35 +38,36 @@ pub fn parse_tacky(
 }
 
 fn convert_symbols_to_tacky(ast_symbols: &HashMap<String, Symbol>) -> Vec<TTopLevel> {
-    let mut static_vars = vec![];
-
-    for (symbol_name, symbol) in ast_symbols {
-        match symbol.clone().identifier_attrs {
-            SymbolAttrs::StaticAttr { init, global } => {
-                match init {
-                    SymbolInitialValue::Initial(static_init) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: static_init.clone() }),
-                    SymbolInitialValue::Tentative => {
-                        let init_val = match symbol._type.clone() {
-                            ASTType::Int => StaticInit::IntInit(0),
-                            ASTType::Long => StaticInit::LongInit(0),
-                            ASTType::FunType(_, _) => {
-                                panic!("Function type is not supported!");
-                            },
-                        };
-                        static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
-                    },
-                    SymbolInitialValue::NoInitializer => {
-                        // Do nothing
-                    }
-                }
-            }
-            _ => {
-                // Do nothing
-            }
-        }
-    }
-
-    static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
+    panic!("Not implemented");
+    // let mut static_vars = vec![];
+    // 
+    // for (symbol_name, symbol) in ast_symbols {
+    //     match symbol.clone().identifier_attrs {
+    //         SymbolAttrs::StaticAttr { init, global } => {
+    //             match init {
+    //                 SymbolInitialValue::Initial(static_init) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: static_init.clone() }),
+    //                 SymbolInitialValue::Tentative => {
+    //                     let init_val = match symbol._type.clone() {
+    //                         ASTType::Int => StaticInit::IntInit(0),
+    //                         ASTType::Long => StaticInit::LongInit(0),
+    //                         ASTType::FunType(_, _) => {
+    //                             panic!("Function type is not supported!");
+    //                         },
+    //                     };
+    //                     static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
+    //                 },
+    //                 SymbolInitialValue::NoInitializer => {
+    //                     // Do nothing
+    //                 }
+    //             }
+    //         }
+    //         _ => {
+    //             // Do nothing
+    //         }
+    //     }
+    // }
+    // 
+    // static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
 }
 
 fn parse_function(
@@ -75,28 +76,29 @@ fn parse_function(
     switch_map: HashMap<String, SwitchMetadata>,
     symbols: &mut HashMap<String, Symbol>,
 ) -> TFunction {
-    let Some(fun_body) = function.body else {
-        panic!("Function body is missing!");
-    };
-    let Some(fun_decl) = ast_symbols.get(&function.name) else {
-        panic!("Function not found!");
-    };
-    let mut function_instructions = parse_block(&fun_body, switch_map, symbols);
-    let init_val = match fun_decl._type.fun_return_type() {
-        ASTType::Int => ASTConstant::Int(0),
-        ASTType::Long => ASTConstant::Long(0),
-        ASTType::FunType(_, _) => {
-            panic!("Function type is not supported!");
-        },
-    };
-    function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
-    let t_function = TFunction {
-        name: function.name,
-        global: fun_decl.identifier_attrs.is_global(),
-        params: function.params,
-        body: function_instructions
-    };
-    t_function
+    panic!("Not implemented");
+    // let Some(fun_body) = function.body else {
+    //     panic!("Function body is missing!");
+    // };
+    // let Some(fun_decl) = ast_symbols.get(&function.name) else {
+    //     panic!("Function not found!");
+    // };
+    // let mut function_instructions = parse_block(&fun_body, switch_map, symbols);
+    // let init_val = match fun_decl._type.fun_return_type() {
+    //     ASTType::Int => ASTConstant::Int(0),
+    //     ASTType::Long => ASTConstant::Long(0),
+    //     ASTType::FunType(_, _) => {
+    //         panic!("Function type is not supported!");
+    //     },
+    // };
+    // function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
+    // let t_function = TFunction {
+    //     name: function.name,
+    //     global: fun_decl.identifier_attrs.is_global(),
+    //     params: function.params,
+    //     body: function_instructions
+    // };
+    // t_function
 }
 
 fn parse_block(
