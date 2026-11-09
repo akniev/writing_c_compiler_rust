@@ -49,6 +49,7 @@ fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, re
                     StaticInit::LongInit(val) => {
                         result.push_str(&format!("  .quad {}\n", val));
                     }
+                    _ => panic!("Invalid static init type"),
                 }
 
             }

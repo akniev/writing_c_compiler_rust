@@ -58,6 +58,7 @@ impl StaticInit {
         match self {
             StaticInit::IntInit(_) => ASMType::Longword,
             StaticInit::LongInit(_) => ASMType::Quadword,
+            _ => panic!("Invalid static init type"),
         }
     }
 }

@@ -799,14 +799,38 @@ impl ASTConstant {
             (ASTConstant::Int(_), ASTType::Int) => {
                 self.clone()
             }
-            (ASTConstant::Long(_), ASTType::Long) => {
-                self.clone()
-            }
             (ASTConstant::Int(val), ASTType::Long) => {
                 ASTConstant::Long(*val)
             }
+            (ASTConstant::Int(val), ASTType::UInt) => {
+                ASTConstant::UInt(u32::try_from(*val).unwrap() as u64)
+            }
+            (ASTConstant::Int(val), ASTType::ULong) => {
+                ASTConstant::ULong(*val as u64)
+            }
             (ASTConstant::Long(val), ASTType::Int) => {
                 ASTConstant::Int(*val % i64::from(i32::MAX))
+            }
+            (ASTConstant::Long(_), ASTType::Long) => {
+                self.clone()
+            }
+            (ASTConstant::Long(val), ASTType::UInt) => {
+                ASTConstant::UInt(u32::try_from(*val).unwrap() as u64)
+            }
+            (ASTConstant::Long(val), ASTType::ULong) => {
+                ASTConstant::ULong(*val as u64)
+            }
+            (ASTConstant::UInt(val), ASTType::Int) => {
+                ASTConstant::Int((*val as i64) % i64::from(i32::MAX))
+            }
+            (ASTConstant::UInt(val), ASTType::Long) => {
+                ASTConstant::Long(*val as i64)
+            }
+            (ASTConstant::UInt(val), ASTType::UInt) => {
+                self.clone()
+            }
+            (ASTConstant::UInt(val), ASTType::ULong) => {
+                ASTConstant::ULong(*val)
             }
             (_, _) => {
                 panic!("Can't convert a constant {:?}", self);
