@@ -355,6 +355,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                     }
                 ].as_mut());
             }
+            _ => panic!("Unsupported instruction"),
         }
     }
 

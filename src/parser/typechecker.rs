@@ -562,10 +562,19 @@ fn get_common_type(t1: &Option<ASTType>, t2: &Option<ASTType>) -> Option<ASTType
     let Some(t2) = t2 else {
         panic!("Cannot get common type of None");
     };
-    if t1 == t2 {
+
+    if t1.size_in_bytes() == t2.size_in_bytes() {
+        return if t1.is_signed() {
+            Some(t2.clone())
+        } else {
+            Some(t1.clone())
+        }
+    }
+
+    if t1.size_in_bytes() > t2.size_in_bytes() {
         Some(t1.clone())
     } else {
-        Some(ASTType::Long)
+        Some(t2.clone())
     }
 }
 

@@ -5,6 +5,7 @@ top_level = Function(identifier, bool global, identifier* params, instruction* b
 instruction = Return(val)
             | SignExtend(val src, val dst)
             | Truncate(val src, val dst)
+            | ZeroExtend(val src, val dst)
             | Unary(unary_operator, val src, val dst)
             | Binary(binary_operator, val src1, val src2, val dst)
             | Copy(val src, val dst)
@@ -52,6 +53,7 @@ pub enum TInstruction {
     Return(TValue),
     SignExtend { src: TValue, dst: TValue },
     Truncate { src: TValue, dst: TValue },
+    ZeroExtend { src: TValue, dst: TValue },
     Unary { op: TUnaryOperator, src: TValue, dst: TValue },
     Binary { op: TBinaryOperator, src1: TValue, src2: TValue, dst: TValue },
     Copy { src: TValue, dst: TValue },

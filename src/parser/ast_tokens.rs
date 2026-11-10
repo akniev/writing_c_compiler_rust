@@ -97,6 +97,26 @@ impl ASTType {
             _ => panic!("Not a function type!"),
         }
     }
+
+    pub fn size_in_bytes(&self) -> usize {
+        match self {
+            ASTType::Int => 4,
+            ASTType::Long => 8,
+            ASTType::UInt => 4,
+            ASTType::ULong => 8,
+            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+        }
+    }
+    
+    pub fn is_signed(&self) -> bool {
+        match self {
+            ASTType::Int => true,
+            ASTType::Long => true,
+            ASTType::UInt => false,
+            ASTType::ULong => false,
+            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -38,36 +38,37 @@ pub fn parse_tacky(
 }
 
 fn convert_symbols_to_tacky(ast_symbols: &HashMap<String, Symbol>) -> Vec<TTopLevel> {
-    panic!("Not implemented");
-    // let mut static_vars = vec![];
-    // 
-    // for (symbol_name, symbol) in ast_symbols {
-    //     match symbol.clone().identifier_attrs {
-    //         SymbolAttrs::StaticAttr { init, global } => {
-    //             match init {
-    //                 SymbolInitialValue::Initial(static_init) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: static_init.clone() }),
-    //                 SymbolInitialValue::Tentative => {
-    //                     let init_val = match symbol._type.clone() {
-    //                         ASTType::Int => StaticInit::IntInit(0),
-    //                         ASTType::Long => StaticInit::LongInit(0),
-    //                         ASTType::FunType(_, _) => {
-    //                             panic!("Function type is not supported!");
-    //                         },
-    //                     };
-    //                     static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
-    //                 },
-    //                 SymbolInitialValue::NoInitializer => {
-    //                     // Do nothing
-    //                 }
-    //             }
-    //         }
-    //         _ => {
-    //             // Do nothing
-    //         }
-    //     }
-    // }
-    // 
-    // static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
+    let mut static_vars = vec![];
+
+    for (symbol_name, symbol) in ast_symbols {
+        match symbol.clone().identifier_attrs {
+            SymbolAttrs::StaticAttr { init, global } => {
+                match init {
+                    SymbolInitialValue::Initial(static_init) => static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: static_init.clone() }),
+                    SymbolInitialValue::Tentative => {
+                        let init_val = match symbol._type.clone() {
+                            ASTType::Int => StaticInit::IntInit(0),
+                            ASTType::Long => StaticInit::LongInit(0),
+                            ASTType::UInt => StaticInit::UIntInit(0),
+                            ASTType::ULong => StaticInit::ULongInit(0),
+                            ASTType::FunType(_, _) => {
+                                panic!("Function type is not supported!");
+                            },
+                        };
+                        static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
+                    },
+                    SymbolInitialValue::NoInitializer => {
+                        // Do nothing
+                    }
+                }
+            }
+            _ => {
+                // Do nothing
+            }
+        }
+    }
+
+    static_vars.iter().map(|static_var| TTopLevel::StaticVariable(static_var.clone())).collect()
 }
 
 fn parse_function(
@@ -76,29 +77,30 @@ fn parse_function(
     switch_map: HashMap<String, SwitchMetadata>,
     symbols: &mut HashMap<String, Symbol>,
 ) -> TFunction {
-    panic!("Not implemented");
-    // let Some(fun_body) = function.body else {
-    //     panic!("Function body is missing!");
-    // };
-    // let Some(fun_decl) = ast_symbols.get(&function.name) else {
-    //     panic!("Function not found!");
-    // };
-    // let mut function_instructions = parse_block(&fun_body, switch_map, symbols);
-    // let init_val = match fun_decl._type.fun_return_type() {
-    //     ASTType::Int => ASTConstant::Int(0),
-    //     ASTType::Long => ASTConstant::Long(0),
-    //     ASTType::FunType(_, _) => {
-    //         panic!("Function type is not supported!");
-    //     },
-    // };
-    // function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
-    // let t_function = TFunction {
-    //     name: function.name,
-    //     global: fun_decl.identifier_attrs.is_global(),
-    //     params: function.params,
-    //     body: function_instructions
-    // };
-    // t_function
+    let Some(fun_body) = function.body else {
+        panic!("Function body is missing!");
+    };
+    let Some(fun_decl) = ast_symbols.get(&function.name) else {
+        panic!("Function not found!");
+    };
+    let mut function_instructions = parse_block(&fun_body, switch_map, symbols);
+    let init_val = match fun_decl._type.fun_return_type() {
+        ASTType::Int => ASTConstant::Int(0),
+        ASTType::Long => ASTConstant::Long(0),
+        ASTType::UInt => ASTConstant::UInt(0),
+        ASTType::ULong => ASTConstant::ULong(0),
+        ASTType::FunType(_, _) => {
+            panic!("Function type is not supported!");
+        },
+    };
+    function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
+    let t_function = TFunction {
+        name: function.name,
+        global: fun_decl.identifier_attrs.is_global(),
+        params: function.params,
+        body: function_instructions
+    };
+    t_function
 }
 
 fn parse_block(
@@ -457,19 +459,24 @@ fn emit_tacky(
         }
         ASTExpression::Cast { target_type, exp } => {
             let result = emit_tacky(exp.as_ref(), instructions, symbols);
-            let Some(t) = exp.exp_type.clone() else {
+            let Some(inner_type) = exp.exp_type.clone() else {
                 panic!("Wrong type!");
             };
-            if target_type.clone() == t {
+            if target_type.clone() == inner_type {
                 return result;
             }
             let dst_name = make_temporary(typed_exp.exp_type.clone(), symbols);
 
             let dst = TValue::Var(dst_name);
-            if target_type == ASTType::Long {
+
+            if target_type.size_in_bytes() == inner_type.size_in_bytes() {
+                instructions.push(TInstruction::Copy { src: result, dst: dst.clone() });
+            } else if target_type.size_in_bytes() < inner_type.size_in_bytes() {
+                instructions.push(TInstruction::Truncate { src: result, dst: dst.clone() });
+            } else if inner_type.is_signed() {
                 instructions.push(TInstruction::SignExtend { src: result, dst: dst.clone() });
             } else {
-                instructions.push(TInstruction::Truncate { src: result, dst: dst.clone() });
+                instructions.push(TInstruction::ZeroExtend { src: result, dst: dst.clone() });
             }
 
             dst
