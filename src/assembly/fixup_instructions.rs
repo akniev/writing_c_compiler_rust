@@ -1,4 +1,4 @@
-use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMType};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMImmValue, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMType};
 
 pub fn fix_movs_in_program(program: ASMProgram) -> ASMProgram {
     let mut top_level = vec![];
@@ -62,16 +62,23 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             let mut n_instructions = vec![];
             let mut src = src;
 
-            if let ASMOperand::Imm(val) = &src && matches!(_type, ASMType::Quadword) {
-                if *val < i64::from(i32::MIN) || *val > i64::from(i32::MAX) {
-                    n_instructions.push(
-                        ASMInstruction::Mov {
-                            _type: ASMType::Quadword,
-                            src,
-                            dst: ASMOperand::Reg(ASMRegister::R10)
+            if let ASMOperand::Imm(value) = &src && matches!(_type, ASMType::Quadword) {
+                match value {
+                    ASMImmValue::Signed(val) => {
+                        if *val < i64::from(i32::MIN) || *val > i64::from(i32::MAX) {
+                            n_instructions.push(
+                                ASMInstruction::Mov {
+                                    _type: ASMType::Quadword,
+                                    src,
+                                    dst: ASMOperand::Reg(ASMRegister::R10)
+                                }
+                            );
+                            src = ASMOperand::Reg(ASMRegister::R10);
                         }
-                    );
-                    src = ASMOperand::Reg(ASMRegister::R10);
+                    }
+                    ASMImmValue::Unsigned(val) => {
+                        // Do nothing
+                    }
                 }
             }
 
@@ -90,11 +97,29 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             }
             n_instructions
         }
+        ASMInstruction::MovZeroExtend { src, dst } => {
+            let mut n_instructions = vec![];
+
+            if let ASMOperand::Reg(_) = &dst {
+                n_instructions.extend(vec![
+                    ASMInstruction::Mov { _type: ASMType::Longword, src, dst },
+                ]);
+            } else if let ASMOperand::Stack(_) = &dst {
+                n_instructions.extend(vec![
+                    ASMInstruction::Mov { _type: ASMType::Longword, src, dst: ASMOperand::Reg(ASMRegister::R11) },
+                    ASMInstruction::Mov { _type: ASMType::Quadword, src: ASMOperand::Reg(ASMRegister::R11), dst },
+                ]);
+            } else {
+                panic!("Invalid destination operand for MovZeroExtend");
+            }
+
+            n_instructions
+        }
         ASMInstruction::Cmp { _type, operand1, operand2 } => {
             let mut n_instructions = vec![];
 
             let operand1 = match operand1 {
-                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                ASMOperand::Imm(ASMImmValue::Signed(val)) if !i32::try_from(val).is_ok() => {
                     n_instructions.extend(vec![
                         ASMInstruction::Mov { _type, src: operand1, dst: ASMOperand::Reg(ASMRegister::R9) },
                     ]);
@@ -142,7 +167,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             let mut n_instructions = vec![];
 
             let operand1 = match operand1 {
-                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                ASMOperand::Imm(ASMImmValue::Signed(val)) if !i32::try_from(val).is_ok() => {
                     n_instructions.extend(vec![
                         ASMInstruction::Mov { _type, src: operand1.clone(), dst: ASMOperand::Reg(ASMRegister::R10) },
                     ]);
@@ -177,7 +202,7 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
             let mut n_instructions = vec![];
 
             let operand1 = match operand1 {
-                ASMOperand::Imm(val) if !i32::try_from(val).is_ok() => {
+                ASMOperand::Imm(ASMImmValue::Signed(val)) if !i32::try_from(val).is_ok() => {
                     n_instructions.extend(vec![
                         ASMInstruction::Mov { _type, src: operand1.clone(), dst: ASMOperand::Reg(ASMRegister::R10) },
                     ]);
@@ -228,6 +253,19 @@ fn fix_movs_in_instruction(instruction: ASMInstruction) -> Vec<ASMInstruction> {
                     vec![
                         ASMInstruction::Mov { _type, src: op, dst: ASMOperand::Reg(ASMRegister::R10) },
                         ASMInstruction::Idiv { _type, op: ASMOperand::Reg(ASMRegister::R10) }
+                    ]
+                }
+                _ => {
+                    vec![instruction]
+                }
+            }
+        }
+        ASMInstruction::Div { _type, op } => {
+            match op.clone() {
+                ASMOperand::Imm(_) => {
+                    vec![
+                        ASMInstruction::Mov { _type, src: op, dst: ASMOperand::Reg(ASMRegister::R10) },
+                        ASMInstruction::Div { _type, op: ASMOperand::Reg(ASMRegister::R10) }
                     ]
                 }
                 _ => {

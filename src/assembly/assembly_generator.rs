@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMType, ASMUnaryOperator};
+use crate::assembly::assembly_tokens::{ASMBinaryOperator, ASMCondCode, ASMImmValue, ASMInstruction, ASMOperand, ASMProgram, ASMRegister, ASMTopLevel, ASMType, ASMUnaryOperator};
 use crate::parser::ast_tokens::ASTConstant;
 use crate::parser::typechecker::Symbol;
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TTopLevel, TUnaryOperator, TValue};
@@ -90,7 +90,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
     for instruction in body {
         match instruction {
             TInstruction::Return(val) => {
-                let _type = get_tvalue_type(&val, symbols);
+                let _type = val.asm_type(symbols);
                 instructions.append(vec![
                     ASMInstruction::Mov {
                         _type,
@@ -103,24 +103,24 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
             TInstruction::Unary { op, src, dst } => {
                 match op {
                     TUnaryOperator::Not => {
-                        let cmp_type = get_tvalue_type(&src, symbols);
-                        let mov_type = get_tvalue_type(&dst, symbols);
+                        let cmp_type = src.asm_type(symbols);
+                        let mov_type = dst.asm_type(symbols);
                         instructions.append(vec![
                             ASMInstruction::Cmp {
                                 _type: cmp_type,
-                                operand1: ASMOperand::Imm(0),
+                                operand1: ASMOperand::Imm(ASMImmValue::Signed(0)),
                                 operand2: src.to_operand()
                             },
                             ASMInstruction::Mov {
                                 _type: mov_type,
-                                src: ASMOperand::Imm(0),
+                                src: ASMOperand::Imm(ASMImmValue::Signed(0)),
                                 dst: dst.to_operand()
                             },
                             ASMInstruction::SetCC { cond_code: ASMCondCode::E, operand: dst.to_operand() },
                         ].as_mut());
                     }
                     _ => {
-                        let _type = get_tvalue_type(&src, symbols);
+                        let _type = src.asm_type(symbols);
                         instructions.append(vec![
                             ASMInstruction::Mov {
                                 _type,
@@ -137,45 +137,94 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 }
             }
             TInstruction::Binary { op, src1, src2, dst } => {
-                let _type = get_tvalue_type(&src1, symbols);
+                let _type = src1.asm_type(symbols);
+                let is_signed = src1.is_signed(symbols);
                 match op {
                     TBinaryOperator::Divide => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov {
-                                _type,
-                                src: src1.to_operand(),
-                                dst: ASMOperand::Reg(ASMRegister::AX)
-                            },
-                            ASMInstruction::Cdq { _type },
-                            ASMInstruction::Idiv {
-                                _type,
-                                op: src2.to_operand()
-                            },
-                            ASMInstruction::Mov {
-                                _type,
-                                src: ASMOperand::Reg(ASMRegister::AX),
-                                dst: dst.to_operand()
-                            }
-                        ].as_mut());
+                        if is_signed {
+                            instructions.append(vec![
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: src1.to_operand(),
+                                    dst: ASMOperand::Reg(ASMRegister::AX)
+                                },
+                                ASMInstruction::Cdq { _type },
+                                ASMInstruction::Idiv {
+                                    _type,
+                                    op: src2.to_operand()
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Reg(ASMRegister::AX),
+                                    dst: dst.to_operand()
+                                }
+                            ].as_mut());
+                        } else {
+                            instructions.append(vec![
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: src1.to_operand(),
+                                    dst: ASMOperand::Reg(ASMRegister::AX)
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Imm(ASMImmValue::Signed(0)),
+                                    dst: ASMOperand::Reg(ASMRegister::DX)
+                                },
+                                ASMInstruction::Div {
+                                    _type,
+                                    op: src2.to_operand()
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Reg(ASMRegister::AX),
+                                    dst: dst.to_operand()
+                                }
+                            ].as_mut());
+                        }
                     }
                     TBinaryOperator::Remainder => {
-                        instructions.append(vec![
-                            ASMInstruction::Mov {
-                                _type,
-                                src: src1.to_operand(),
-                                dst: ASMOperand::Reg(ASMRegister::AX)
-                            },
-                            ASMInstruction::Cdq { _type },
-                            ASMInstruction::Idiv {
-                                _type,
-                                op: src2.to_operand()
-                            },
-                            ASMInstruction::Mov {
-                                _type,
-                                src: ASMOperand::Reg(ASMRegister::DX),
-                                dst: dst.to_operand()
-                            }
-                        ].as_mut());
+                        if is_signed {
+                            instructions.append(vec![
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: src1.to_operand(),
+                                    dst: ASMOperand::Reg(ASMRegister::AX)
+                                },
+                                ASMInstruction::Cdq { _type },
+                                ASMInstruction::Idiv {
+                                    _type,
+                                    op: src2.to_operand()
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Reg(ASMRegister::DX),
+                                    dst: dst.to_operand()
+                                }
+                            ].as_mut());
+                        } else {
+                            instructions.append(vec![
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: src1.to_operand(),
+                                    dst: ASMOperand::Reg(ASMRegister::AX)
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Imm(ASMImmValue::Signed(0)),
+                                    dst: ASMOperand::Reg(ASMRegister::DX)
+                                },
+                                ASMInstruction::Div {
+                                    _type,
+                                    op: src2.to_operand()
+                                },
+                                ASMInstruction::Mov {
+                                    _type,
+                                    src: ASMOperand::Reg(ASMRegister::DX),
+                                    dst: dst.to_operand()
+                                }
+                            ].as_mut());
+                        }
                     }
                     TBinaryOperator::GreaterThan |
                     TBinaryOperator::GreaterThanOrEqual |
@@ -183,7 +232,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                     TBinaryOperator::LessThanOrEqual |
                     TBinaryOperator::Equal |
                     TBinaryOperator::NotEqual => {
-                        let dst_type = get_tvalue_type(&dst, symbols);
+                        let dst_type = dst.asm_type(symbols);
                         instructions.append(vec![
                             ASMInstruction::Cmp {
                                 _type,
@@ -192,11 +241,11 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                             },
                             ASMInstruction::Mov {
                                 _type: dst_type,
-                                src: ASMOperand::Imm(0),
+                                src: ASMOperand::Imm(ASMImmValue::Signed(0)),
                                 dst: dst.to_operand()
                             },
                             ASMInstruction::SetCC {
-                                cond_code: op.to_cond_code(),
+                                cond_code: op.to_cond_code(is_signed),
                                 operand: dst.to_operand()
                             },
                         ].as_mut())
@@ -248,7 +297,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 for tacky_arg in register_args {
                     let r = arg_registers[reg_index];
                     let assembly_arg = tacky_arg.to_operand();
-                    let _type = get_tvalue_type(tacky_arg, symbols);
+                    let _type = tacky_arg.asm_type(symbols);
                     instructions.push(ASMInstruction::Mov {
                         _type,
                         src: assembly_arg,
@@ -260,7 +309,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 // pass args on stack
                 for tacky_arg in stack_args.iter().rev() {
                     let assembly_arg = tacky_arg.to_operand();
-                    let _type = get_tvalue_type(tacky_arg, symbols);
+                    let _type = tacky_arg.asm_type(symbols);
                     match assembly_arg {
                         ASMOperand::Reg(_) | ASMOperand::Imm(_) => {
                             instructions.push(ASMInstruction::Push(assembly_arg));
@@ -289,7 +338,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
 
                 // retrieve return value
                 let assembly_dst = dst.to_operand();
-                let _type = get_tvalue_type(&dst, symbols);
+                let _type = dst.asm_type(symbols);
                 instructions.push(ASMInstruction::Mov {
                     _type,
                     src: ASMOperand::Reg(ASMRegister::AX),
@@ -297,22 +346,22 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 });
             }
             TInstruction::JumpIfZero { val, label } => {
-                let _type = get_tvalue_type(&val, symbols);
+                let _type = val.asm_type(symbols);
                 instructions.append(vec![
                     ASMInstruction::Cmp {
                         _type,
-                        operand1: ASMOperand::Imm(0),
+                        operand1: ASMOperand::Imm(ASMImmValue::Signed(0)),
                         operand2: val.to_operand()
                     },
                     ASMInstruction::JmpCC { cond_code: ASMCondCode::E, label },
                 ].as_mut());
             }
             TInstruction::JumpIfNonZero { val, label } => {
-                let _type = get_tvalue_type(&val, symbols);
+                let _type = val.asm_type(symbols);
                 instructions.append(vec![
                     ASMInstruction::Cmp {
                         _type,
-                        operand1: ASMOperand::Imm(0),
+                        operand1: ASMOperand::Imm(ASMImmValue::Signed(0)),
                         operand2: val.to_operand()
                     },
                     ASMInstruction::JmpCC { cond_code: ASMCondCode::NE, label },
@@ -329,7 +378,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 ].as_mut());
             }
             TInstruction::Copy { src, dst } => {
-                let _type = get_tvalue_type(&dst, symbols);
+                let _type = dst.asm_type(symbols);
                 instructions.append(vec![
                     ASMInstruction::Mov {
                         _type,
@@ -355,52 +404,76 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                     }
                 ].as_mut());
             }
-            _ => panic!("Unsupported instruction"),
+            TInstruction::ZeroExtend { src, dst } => {
+                instructions.append(vec![
+                    ASMInstruction::MovZeroExtend {
+                        src: src.to_operand(),
+                        dst: dst.to_operand(),
+                    }
+                ].as_mut());
+            },
         }
     }
 
     instructions
 }
 
-fn get_tvalue_type(value: &TValue, symbols: &HashMap<String, Symbol>) -> ASMType {
-    panic!("Not implemented");
-    // match value {
-    //     TValue::Constant(ast_const) => {
-    //         match ast_const {
-    //             ASTConstant::Int(_) => ASMType::Longword,
-    //             ASTConstant::Long(_) => ASMType::Quadword,
-    //         }
-    //     }
-    //     TValue::Var(name) => {
-    //         symbols[name]._type.asm_type()
-    //     }
-    // }
-}
-
 impl TValue {
     pub fn to_operand(&self) -> ASMOperand {
-        panic!("Not implemented");
-        // match self {
-        //     TValue::Constant(value) => {
-        //         let value = match value {
-        //             ASTConstant::Int(value) => value,
-        //             ASTConstant::Long(value) => value,
-        //         };
-        //         ASMOperand::Imm(value.clone())
-        //     },
-        //     TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
-        // }
+        match self {
+            TValue::Constant(value) => {
+                let value = match value {
+                    ASTConstant::Int(value) => ASMImmValue::Signed(*value),
+                    ASTConstant::Long(value) => ASMImmValue::Signed(*value),
+                    ASTConstant::UInt(value) => ASMImmValue::Unsigned(*value),
+                    ASTConstant::ULong(value) => ASMImmValue::Unsigned(*value),
+                };
+                ASMOperand::Imm(value.clone())
+            },
+            TValue::Var(identifier) => ASMOperand::Pseudo(identifier.clone()),
+        }
+    }
+
+    pub fn asm_type(&self, symbols: &HashMap<String, Symbol>) -> ASMType {
+        match self {
+            TValue::Constant(ast_const) => {
+                match ast_const {
+                    ASTConstant::Int(_) => ASMType::Longword,
+                    ASTConstant::Long(_) => ASMType::Quadword,
+                    ASTConstant::UInt(_) => ASMType::Longword,
+                    ASTConstant::ULong(_) => ASMType::Quadword,
+                }
+            }
+            TValue::Var(name) => {
+                symbols[name]._type.asm_type()
+            }
+        }
+    }
+
+    pub fn is_signed(&self, symbols: &HashMap<String, Symbol>) -> bool {
+        match self {
+            TValue::Constant(ast_const) => {
+                match ast_const {
+                    ASTConstant::Int(_) => true,
+                    ASTConstant::Long(_) => true,
+                    ASTConstant::UInt(_) => false,
+                    ASTConstant::ULong(_) => false,
+                }
+            }
+            TValue::Var(name) => {
+                symbols[name]._type.is_signed()
+            }
+        }
     }
 }
 
 impl TUnaryOperator {
     pub fn to_operator(&self) -> ASMUnaryOperator {
-        panic!("Not implemented");
-        // match self {
-        //     TUnaryOperator::Complement => ASMUnaryOperator::Not,
-        //     TUnaryOperator::Negate => ASMUnaryOperator::Neg,
-        //     _ => panic!("Unsupported unary operator"),
-        // }
+        match self {
+            TUnaryOperator::Complement => ASMUnaryOperator::Not,
+            TUnaryOperator::Negate => ASMUnaryOperator::Neg,
+            _ => panic!("Unsupported unary operator"),
+        }
     }
 }
 
@@ -419,15 +492,27 @@ impl TBinaryOperator {
         }
     }
 
-    pub fn to_cond_code(&self) -> ASMCondCode {
-        match self {
-            TBinaryOperator::GreaterThan => ASMCondCode::G,
-            TBinaryOperator::GreaterThanOrEqual => ASMCondCode::GE,
-            TBinaryOperator::LessThan => ASMCondCode::L,
-            TBinaryOperator::LessThanOrEqual => ASMCondCode::LE,
-            TBinaryOperator::Equal => ASMCondCode::E,
-            TBinaryOperator::NotEqual => ASMCondCode::NE,
-            _ => panic!("Unsupported binary operator"),
+    pub fn to_cond_code(&self, is_signed: bool) -> ASMCondCode {
+        if is_signed {
+            match self {
+                TBinaryOperator::GreaterThan => ASMCondCode::G,
+                TBinaryOperator::GreaterThanOrEqual => ASMCondCode::GE,
+                TBinaryOperator::LessThan => ASMCondCode::L,
+                TBinaryOperator::LessThanOrEqual => ASMCondCode::LE,
+                TBinaryOperator::Equal => ASMCondCode::E,
+                TBinaryOperator::NotEqual => ASMCondCode::NE,
+                _ => panic!("Unsupported binary operator"),
+            }
+        } else {
+            match self {
+                TBinaryOperator::GreaterThan => ASMCondCode::A,
+                TBinaryOperator::GreaterThanOrEqual => ASMCondCode::AE,
+                TBinaryOperator::LessThan => ASMCondCode::B,
+                TBinaryOperator::LessThanOrEqual => ASMCondCode::BE,
+                TBinaryOperator::Equal => ASMCondCode::E,
+                TBinaryOperator::NotEqual => ASMCondCode::NE,
+                _ => panic!("Unsupported binary operator"),
+            }
         }
     }
 }

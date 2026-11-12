@@ -461,7 +461,7 @@ impl Parser {
                 };
                 result = ASTExpression::Constant(ASTConstant::Long(value)).to_typed_without_type();
             }
-            LexerToken::UIntConst(u32) => {
+            LexerToken::UIntConst(_) => {
                 let const_token = self.expect(LexerTokenKind::UIntConst);
                 let value = match const_token {
                     LexerToken::UIntConst(value) => value,
@@ -469,7 +469,7 @@ impl Parser {
                 };
                 result = ASTExpression::Constant(ASTConstant::UInt(value as u64)).to_typed_without_type();
             }
-            LexerToken::ULongConst(u64) => {
+            LexerToken::ULongConst(_) => {
                 let const_token = self.expect(LexerTokenKind::ULongConst);
                 let value = match const_token {
                     LexerToken::ULongConst(value) => value,

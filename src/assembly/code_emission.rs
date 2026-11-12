@@ -133,6 +133,7 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
         ASMInstruction::Label(label) => {
             result.push_str(&format!(".L{}:\n", label));
         }
+        _ => panic!("Invalid instruction"),
     }
 }
 
@@ -145,6 +146,7 @@ impl ASMCondCode {
             ASMCondCode::GE => "ge".to_string(),
             ASMCondCode::L => "l".to_string(),
             ASMCondCode::LE => "le".to_string(),
+            _ => panic!("Invalid condition code"),
         }
     }
 }

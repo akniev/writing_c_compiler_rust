@@ -106,7 +106,19 @@ fn fix_pseudo_in_instruction(instruction: ASMInstruction, symbols: &HashMap<Stri
         ASMInstruction::Movsx { src, dst } => {
             ASMInstruction::Movsx {
                 src: fix_pseudo_in_operands(src, symbols),
-                dst: fix_pseudo_in_operands(dst, symbols)
+                dst: fix_pseudo_in_operands(dst, symbols),
+            }
+        }
+        ASMInstruction::MovZeroExtend { src, dst } => {
+            ASMInstruction::MovZeroExtend {
+                src: fix_pseudo_in_operands(src, symbols),
+                dst: fix_pseudo_in_operands(dst, symbols),
+            }
+        }
+        ASMInstruction::Div { _type, op: operand } => {
+            ASMInstruction::Div {
+                _type,
+                op: fix_pseudo_in_operands(operand, symbols)
             }
         }
     }
