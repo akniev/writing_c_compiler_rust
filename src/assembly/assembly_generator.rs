@@ -329,7 +329,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                 instructions.push(ASMInstruction::Call(fun_name.clone()));
 
                 // adjust stack pointer
-                let bytes_to_remove: i64 = 8 * (stack_args.len() as i64) + stack_padding;
+                let bytes_to_remove: i128 = 8 * (stack_args.len() as i128) + stack_padding;
                 if bytes_to_remove > 0 {
                     instructions.push(
                         ASMInstruction::deallocate_stack(bytes_to_remove)

@@ -195,20 +195,29 @@ pub enum ASTExpression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASTConstant {
-    Int(i64),
-    Long(i64),
-    UInt(u64),
-    ULong(u64),
+    Int(i128),
+    Long(i128),
+    UInt(i128),
+    ULong(i128),
 }
 
 impl ASTConstant {
-    pub fn typed_constant(i: i64, t: ASTType) -> ASTConstant {
+    pub fn typed_constant(i: i128, t: ASTType) -> ASTConstant {
         match t {
-            ASTType::Int => ASTConstant::Int(i),
-            ASTType::Long => ASTConstant::Long(i),
-            ASTType::UInt => ASTConstant::UInt(i as u64),
-            ASTType::ULong => ASTConstant::ULong(i as u64),
-            ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+            ASTType::Int => ASTConstant::Int((i as i32) as i128),
+            ASTType::Long => ASTConstant::Long((i as i64) as i128),
+            ASTType::UInt => ASTConstant::UInt((i as u32) as i128),
+            ASTType::ULong => ASTConstant::ULong((i as u64) as i128),
+            _ => panic!("Invalid constant type"),
+        }
+    }
+
+    pub fn val(&self) -> i128 {
+        match self {
+            ASTConstant::Int(i) => *i,
+            ASTConstant::Long(i) => *i,
+            ASTConstant::UInt(i) => *i,
+            ASTConstant::ULong(i) => *i,
         }
     }
 }

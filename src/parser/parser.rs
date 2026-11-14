@@ -451,7 +451,7 @@ impl Parser {
                     LexerToken::IntConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::Int(value as i64)).to_typed_without_type();
+                result = ASTExpression::Constant(ASTConstant::Int(value as i128)).to_typed_without_type();
             }
             LexerToken::LongConst(_) => {
                 let const_token = self.expect(LexerTokenKind::LongConst);
@@ -459,7 +459,7 @@ impl Parser {
                     LexerToken::LongConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::Long(value)).to_typed_without_type();
+                result = ASTExpression::Constant(ASTConstant::Long(value as i128)).to_typed_without_type();
             }
             LexerToken::UIntConst(_) => {
                 let const_token = self.expect(LexerTokenKind::UIntConst);
@@ -467,7 +467,7 @@ impl Parser {
                     LexerToken::UIntConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::UInt(value as u64)).to_typed_without_type();
+                result = ASTExpression::Constant(ASTConstant::UInt(value as i128)).to_typed_without_type();
             }
             LexerToken::ULongConst(_) => {
                 let const_token = self.expect(LexerTokenKind::ULongConst);
@@ -475,7 +475,7 @@ impl Parser {
                     LexerToken::ULongConst(value) => value,
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
-                result = ASTExpression::Constant(ASTConstant::UInt(value)).to_typed_without_type();
+                result = ASTExpression::Constant(ASTConstant::ULong(value as i128)).to_typed_without_type();
             }
             LexerToken::Identifier(_) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
                 let function_call = self.parse_function_call();
@@ -803,34 +803,52 @@ impl ASTConstant {
                 ASTConstant::Long(*val)
             }
             (ASTConstant::Int(val), ASTType::UInt) => {
-                ASTConstant::UInt(u32::try_from(*val).unwrap() as u64)
+                ASTConstant::UInt(u32::try_from(*val).unwrap() as i128)
             }
             (ASTConstant::Int(val), ASTType::ULong) => {
-                ASTConstant::ULong(*val as u64)
+                ASTConstant::ULong(*val)
             }
             (ASTConstant::Long(val), ASTType::Int) => {
-                ASTConstant::Int(*val % i64::from(i32::MAX))
+                ASTConstant::Int(*val % i64::from(i32::MAX) as i128)
             }
             (ASTConstant::Long(_), ASTType::Long) => {
                 self.clone()
             }
             (ASTConstant::Long(val), ASTType::UInt) => {
-                ASTConstant::UInt(u32::try_from(*val).unwrap() as u64)
+                ASTConstant::UInt(u32::try_from(*val).unwrap() as i128)
             }
             (ASTConstant::Long(val), ASTType::ULong) => {
-                ASTConstant::ULong(*val as u64)
+                ASTConstant::ULong(*val as i128)
             }
             (ASTConstant::UInt(val), ASTType::Int) => {
-                ASTConstant::Int((*val as i64) % i64::from(i32::MAX))
+                ASTConstant::Int(*val % i64::from(i32::MAX) as i128)
             }
             (ASTConstant::UInt(val), ASTType::Long) => {
-                ASTConstant::Long(*val as i64)
+                ASTConstant::Long(*val)
             }
-            (ASTConstant::UInt(val), ASTType::UInt) => {
+            (ASTConstant::UInt(_), ASTType::UInt) => {
                 self.clone()
             }
             (ASTConstant::UInt(val), ASTType::ULong) => {
                 ASTConstant::ULong(*val)
+            }
+            (ASTConstant::ULong(val), ASTType::Int) => {
+                let mod_val = i32::MAX as i128;
+                let const_val = *val % mod_val;
+                ASTConstant::Int(const_val)
+            }
+            (ASTConstant::ULong(val), ASTType::Long) => {
+                let mod_val = i64::MAX as i128;
+                let const_val = *val % mod_val;
+                ASTConstant::Long(const_val)
+            }
+            (ASTConstant::ULong(val), ASTType::UInt) => {
+                let mod_val = u32::MAX as i128;
+                let const_val = val % mod_val;
+                ASTConstant::UInt(const_val)
+            }
+            (ASTConstant::ULong(_), ASTType::ULong) => {
+                self.clone()
             }
             (_, _) => {
                 panic!("Can't convert a constant {:?}", self);

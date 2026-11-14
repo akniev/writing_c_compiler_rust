@@ -26,7 +26,7 @@ fn fix_pseudo_in_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, ASM
                 new_instructions.push(n_instruction);
             }
             let frame_size = align_up(
-                TEMP_COUNTER.load(Ordering::Relaxed),
+                TEMP_COUNTER.load(Ordering::Relaxed) as i128,
                 16
             );
 
@@ -143,8 +143,8 @@ fn fix_pseudo_in_operands(operand: ASMOperand, symbols: &HashMap<String, ASMSymt
                     ASMType::Longword => 4,
                     ASMType::Quadword => 8,
                 };
-                let alignment = _type.alignment() as i64;
-                let offset = align_up(offset, alignment);
+                let alignment = _type.alignment();
+                let offset = align_up(offset, alignment) as i64;
                 TEMP_COUNTER.fetch_add(offset, Ordering::Relaxed);
                 let offset = TEMP_COUNTER.load(Ordering::Relaxed);
                 offsets.insert(identifier.clone(), offset);
@@ -156,6 +156,6 @@ fn fix_pseudo_in_operands(operand: ASMOperand, symbols: &HashMap<String, ASMSymt
     }
 }
 
-fn align_up(value: i64, alignment: i64) -> i64 {
+fn align_up(value: i128, alignment: i128) -> i128 {
     ((value + alignment - 1) / alignment) * alignment
 }

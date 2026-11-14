@@ -3,7 +3,7 @@ use crate::parser::ast_tokens::{ASTBlock, ASTBlockItem, ASTConstant, ASTDeclarat
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SwitchMetadata {
-    pub(crate) cases: Vec<(i64, String)>, // values and labels
+    pub(crate) cases: Vec<(i128, String)>, // values and labels
     pub(crate) default: Option<String>, // label of default case
 }
 

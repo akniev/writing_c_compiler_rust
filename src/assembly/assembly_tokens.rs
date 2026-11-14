@@ -79,14 +79,14 @@ impl ASTType {
 }
 
 impl ASMType {
-    pub fn alignment(&self) -> i32 {
+    pub fn alignment(&self) -> i128 {
         match self {
             ASMType::Longword => 4,
             ASMType::Quadword => 8,
         }
     }
 
-    pub fn size(&self) -> i32 {
+    pub fn size(&self) -> i128 {
         match self {
             ASMType::Longword => 4,
             ASMType::Quadword => 8,
@@ -97,7 +97,7 @@ impl ASMType {
 #[derive(Debug, PartialEq)]
 pub enum ASMTopLevel {
     Function { name: String, global: bool, instructions: Vec<ASMInstruction> },
-    StaticVariable { name: String, global: bool, alignment: i32, init: StaticInit },
+    StaticVariable { name: String, global: bool, alignment: i128, init: StaticInit },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -163,8 +163,8 @@ pub enum ASMOperand {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASMImmValue {
-    Signed(i64),
-    Unsigned(u64),
+    Signed(i128),
+    Unsigned(i128),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -290,7 +290,7 @@ impl ASMBinaryOperator {
 }
 
 impl ASMInstruction {
-    pub fn allocate_stack(bytes: i64) -> ASMInstruction {
+    pub fn allocate_stack(bytes: i128) -> ASMInstruction {
         ASMInstruction::Binary {
             binop: ASMBinaryOperator::Sub,
             _type: ASMType::Quadword,
@@ -299,7 +299,7 @@ impl ASMInstruction {
         }
     }
 
-    pub fn deallocate_stack(bytes: i64) -> ASMInstruction {
+    pub fn deallocate_stack(bytes: i128) -> ASMInstruction {
         ASMInstruction::Binary {
             binop: ASMBinaryOperator::Add,
             _type: ASMType::Quadword,

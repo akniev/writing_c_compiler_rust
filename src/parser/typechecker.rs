@@ -140,21 +140,22 @@ fn typechecked_local_variable_declaration(
     } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
         let initial_value = if let Some(unwrapped) = variable_declaration.clone().init
             && let ASTExpression::Constant(init_val) = unwrapped.exp() {
-            match init_val {
-                ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
-                ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
-                ASTConstant::UInt(i) => SymbolInitialValue::Initial(StaticInit::UIntInit(i.clone() as u32)),
-                ASTConstant::ULong(i) => SymbolInitialValue::Initial(StaticInit::ULongInit(i.clone())),
-            }
+            let val = init_val.val();
+            let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
+            let static_init = get_static_init_from_constant(c);
+            static_init
         } else if variable_declaration.init.is_none() {
             match variable_declaration.clone()._type {
                 ASTType::Int => SymbolInitialValue::Initial(StaticInit::IntInit(0)),
                 ASTType::Long => SymbolInitialValue::Initial(StaticInit::LongInit(0)),
+                ASTType::UInt => SymbolInitialValue::Initial(StaticInit::UIntInit(0)),
+                ASTType::ULong => SymbolInitialValue::Initial(StaticInit::ULongInit(0)),
                 _ => panic!("Non-constant initializer on local static variable")
             }
         } else {
             panic!("Non-constant initializer on local static variable")
         };
+
         symbols.insert(
             variable_declaration.name.clone(),
             Symbol {
@@ -198,12 +199,10 @@ fn typechecked_file_scope_variable_declaration(
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTVariableDeclaration {
     let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.clone().init.map(|e| e.exp().clone()) {
-        match init_value {
-            ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone() as i32)),
-            ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
-            ASTConstant::UInt(i) => SymbolInitialValue::Initial(StaticInit::UIntInit(i.clone() as u32)),
-            ASTConstant::ULong(i) => SymbolInitialValue::Initial(StaticInit::ULongInit(i.clone())),
-        }
+        let val = init_value.val();
+        let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
+        let static_init = get_static_init_from_constant(c);
+        static_init
     } else if variable_declaration.init.is_none() {
         if variable_declaration.storage_class == Some(ASTStorageClass::Extern) {
             SymbolInitialValue::NoInitializer
@@ -578,6 +577,15 @@ fn get_common_type(t1: &Option<ASTType>, t2: &Option<ASTType>) -> Option<ASTType
     }
 }
 
+fn get_static_init_from_constant(c: ASTConstant) -> SymbolInitialValue {
+    match c {
+        ASTConstant::Int(i) => SymbolInitialValue::Initial(StaticInit::IntInit(i.clone())),
+        ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
+        ASTConstant::UInt(i) => SymbolInitialValue::Initial(StaticInit::UIntInit(i.clone())),
+        ASTConstant::ULong(i) => SymbolInitialValue::Initial(StaticInit::ULongInit(i.clone())),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Symbol {
     pub name: String,
@@ -637,10 +645,10 @@ pub enum SymbolInitialValue {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StaticInit {
-    IntInit(i32),
-    LongInit(i64),
-    UIntInit(u32),
-    ULongInit(u64),
+    IntInit(i128),
+    LongInit(i128),
+    UIntInit(i128),
+    ULongInit(i128),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -650,11 +658,12 @@ pub struct FunctionInfo {
 }
 
 impl StaticInit {
-    pub fn value(&self) -> i64 {
+    pub fn value(&self) -> i128 {
         match self {
-            StaticInit::IntInit(val) => *val as i64,
+            StaticInit::IntInit(val) => *val,
             StaticInit::LongInit(val) => *val,
-            _ => panic!("Not implemented yet")
+            StaticInit::UIntInit(val) => *val,
+            StaticInit::ULongInit(val) => *val,
         }
     }
 }

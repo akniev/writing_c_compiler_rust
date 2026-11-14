@@ -49,7 +49,12 @@ fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, re
                     StaticInit::LongInit(val) => {
                         result.push_str(&format!("  .quad {}\n", val));
                     }
-                    _ => panic!("Invalid static init type"),
+                    StaticInit::UIntInit(val) => {
+                        result.push_str(&format!("  .long {}\n", val));
+                    },
+                    StaticInit::ULongInit(val) => {
+                        result.push_str(&format!("  .quad {}\n", val));
+                    }
                 }
 
             }
@@ -84,6 +89,11 @@ fn print_instruction(inst: ASMInstruction, symbols: &HashMap<String, Symbol>, re
             let suffix = _type.standard_suffix();
             let reg_size = _type.reg_size();
             result.push_str(&format!("  idiv{} {}\n", suffix, op.to_string(reg_size)));
+        }
+        ASMInstruction::Div { _type, op } => {
+            let suffix = _type.standard_suffix();
+            let reg_size = _type.reg_size();
+            result.push_str(&format!("  div{} {}\n", suffix, op.to_string(reg_size)));
         }
         ASMInstruction::Cdq { _type } => {
             match _type {
@@ -146,7 +156,10 @@ impl ASMCondCode {
             ASMCondCode::GE => "ge".to_string(),
             ASMCondCode::L => "l".to_string(),
             ASMCondCode::LE => "le".to_string(),
-            _ => panic!("Invalid condition code"),
+            ASMCondCode::A => "a".to_string(),
+            ASMCondCode::AE => "ae".to_string(),
+            ASMCondCode::B => "b".to_string(),
+            ASMCondCode::BE => "be".to_string(),
         }
     }
 }

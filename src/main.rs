@@ -62,11 +62,11 @@ fn main() {
 
     if args.lex {
         let tokens = tokenize(input_str);
-        println!("{:?}", tokens);
+        println!("{:#?}", tokens);
     } else if args.parse {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
-        println!("{:?}", program);
+        println!("{:#?}", program);
     } else if args.validate {
         let tokens = tokenize(input_str);
         let program = parse(tokens);
