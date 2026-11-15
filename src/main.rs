@@ -51,6 +51,9 @@ struct Args {
     #[arg(short = 'c', long = "compile")]
     c: bool,
 
+    #[arg(short = 'l', value_name = "LIB")]
+    libraries: Vec<String>,
+
     input: String,
 }
 
@@ -145,13 +148,15 @@ fn main() {
                 .arg(&asm_file)
                 .arg("-o")
                 .arg(&out_file.with_extension("o"))
+                .args(args.libraries.iter().map(|lib| format!("-L{}", lib)))
                 .output()
         } else {
             Command::new("gcc")
                 .arg(&asm_file)
                 .arg("-o")
-            .arg(&out_file)
-            .output()
+                .arg(&out_file)
+                .args(args.libraries.iter().map(|lib| format!("-L{}", lib)))
+                .output()
         }.expect("Failed to execute command");
 
         if output.status.success() {
