@@ -105,7 +105,7 @@ impl Parser {
             }
         }
 
-        if type_specifiers.is_empty() || Parser::contain_duplicates(&type_specifiers) {
+        if type_specifiers.is_empty() || Parser::contain_duplicates(type_specifiers.iter().map(|x|x.kind()).collect()) {
             panic!("Invalid type specifier");
         }
 
@@ -702,7 +702,7 @@ impl Parser {
         self.tokens.get(self.cursor + n).cloned()
     }
 
-    fn contain_duplicates<T: Eq + std::hash::Hash>(list: &Vec<T>) -> bool {
+    fn contain_duplicates<T: Eq + std::hash::Hash>(list: Vec<T>) -> bool {
         let mut seen = HashSet::new();
         list.iter().any(|x| !seen.insert(x))
     }

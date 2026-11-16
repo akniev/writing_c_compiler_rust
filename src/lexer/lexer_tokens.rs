@@ -1,14 +1,16 @@
 use regex::Regex;
 
-#[derive(Eq, Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LexerToken {
     Identifier(String),
     IntConst(i32),
     LongConst(i64),
     UIntConst(u32),
     ULongConst(u64),
+    DoubleConst(f64),
     Int,
     Long,
+    Double,
     Signed,
     Unsigned,
     Void,
@@ -75,15 +77,17 @@ pub enum LexerToken {
     CompilerDirective,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Eq, Debug, Clone, Copy, PartialEq, Hash)]
 pub enum LexerTokenKind {
     Identifier,
     IntConst,
     LongConst,
     UIntConst,
     ULongConst,
+    DoubleConst,
     Int,
     Long,
+    Double,
     Signed,
     Unsigned,
     Void,
@@ -158,8 +162,10 @@ impl LexerToken {
             LexerToken::LongConst(_) => LexerTokenKind::LongConst,
             LexerToken::UIntConst(_) => LexerTokenKind::UIntConst,
             LexerToken::ULongConst(_) => LexerTokenKind::ULongConst,
+            LexerToken::DoubleConst(_) => LexerTokenKind::DoubleConst,
             LexerToken::Int => LexerTokenKind::Int,
             LexerToken::Long => LexerTokenKind::Long,
+            LexerToken::Double => LexerTokenKind::Double,
             LexerToken::Signed => LexerTokenKind::Signed,
             LexerToken::Unsigned => LexerTokenKind::Unsigned,
             LexerToken::Void => LexerTokenKind::Void,
@@ -232,6 +238,7 @@ impl LexerTokenKind {
     pub const ALLOWED_TYPE_SPECIFIERS: &[LexerTokenKind] = &[
         LexerTokenKind::Int,
         LexerTokenKind::Long,
+        LexerTokenKind::Double,
         LexerTokenKind::Signed,
         LexerTokenKind::Unsigned,
         LexerTokenKind::Static,
@@ -245,13 +252,15 @@ impl LexerTokenKind {
 
     pub fn pattern(&self) -> Regex {
         Regex::new(match self {
-            Self::Identifier => r"^[a-zA-Z_]\w*\b",
-            Self::IntConst => r"^[0-9]+\b",
-            Self::LongConst => r"^[0-9]+[lL]\b",
-            Self::UIntConst => r"^[0-9]+[uU]\b",
-            Self::ULongConst => r"^[0-9]+([lL][uU]|[uU][lL])\b",
+            Self::Identifier => r"^[a-zA-Z_]\w*",
+            Self::IntConst => r"([0-9]+)[^\w.]",
+            Self::LongConst => r"([0-9]+[lL])[^\w.]",
+            Self::UIntConst => r"([0-9]+)[uU][^\w.]",
+            Self::ULongConst => r"([0-9]+([lL][uU]|[uU][lL]))[^\w.]",
+            Self::DoubleConst => r"(([0-9]*\.[0-9]+|[0-9]+\.?)[Ee][+-]?[0-9]+|[0-9]*\.[0-9]+|[0-9]+\.)[^\w.]",
             Self::Int => r"^int\b",
             Self::Long => r"^long\b",
+            Self::Double => r"^double\b",
             Self::Signed => r"^signed\b",
             Self::Unsigned => r"^unsigned\b",
             Self::Void => r"^void\b",
@@ -323,30 +332,51 @@ impl LexerTokenKind {
         match self {
             LexerTokenKind::Identifier => LexerToken::Identifier(text.to_string()),
             LexerTokenKind::IntConst => {
-                let number = text.parse::<i64>().unwrap();
-                if i32::try_from(number).is_ok() {
-                    LexerToken::IntConst(number as i32)
+                let token = if let Ok(val) = text.parse::<i32>() {
+                    LexerToken::IntConst(val)
+                } else if let Ok(val) = text.parse::<i64>() {
+                    LexerToken::LongConst(val)
                 } else {
-                    LexerToken::LongConst(number)
-                }
+                    panic!("Invalid int constant: {}", text);
+                };
+                token
             },
-            LexerTokenKind::LongConst => LexerToken::LongConst(text.trim_end_matches(['l', 'L']).parse().unwrap()),
-            LexerTokenKind::UIntConst => {
-                let trimmed_text = text.trim_end_matches(['u', 'U']);
-                let number = trimmed_text.parse::<u64>().unwrap();
-                if u32::try_from(number).is_ok() {
-                    LexerToken::UIntConst(number as u32)
+            LexerTokenKind::LongConst => {
+                let text =  text.trim_end_matches(['u', 'U', 'l', 'L']);
+                let token = if let Ok(val) = text.parse::<i64>() {
+                    LexerToken::LongConst(val)
                 } else {
-                    LexerToken::ULongConst(number)
-                }
+                    panic!("Invalid long constant: {}", text);
+                };
+                token
+            },
+            LexerTokenKind::UIntConst => {
+                let text =  text.trim_end_matches(['u', 'U', 'l', 'L']);
+                let token = if let Ok(val) = text.parse::<u32>() {
+                    LexerToken::UIntConst(val)
+                } else if let Ok(val) = text.parse::<u64>() {
+                    LexerToken::ULongConst(val)
+                } else {
+                    panic!("Invalid uint constant: {}", text);
+                };
+                token
             }
             LexerTokenKind::ULongConst => {
-                let trimmed_text = text.trim_end_matches(['u', 'U', 'l', 'L']);
-                let number = trimmed_text.parse::<u64>().unwrap();
-                LexerToken::ULongConst(number)
+                let text =  text.trim_end_matches(['u', 'U', 'l', 'L']);
+                let token = if let Ok(val) = text.parse::<u64>() {
+                    LexerToken::ULongConst(val)
+                } else {
+                    panic!("Invalid ulong constant: {}", text);
+                };
+                token
             }
+            LexerTokenKind::DoubleConst => {
+                let val = text.parse::<f64>().unwrap();
+                LexerToken::DoubleConst(val)
+            },
             LexerTokenKind::Int => LexerToken::Int,
             LexerTokenKind::Long => LexerToken::Long,
+            LexerTokenKind::Double => LexerToken::Double,
             LexerTokenKind::Signed => LexerToken::Signed,
             LexerTokenKind::Unsigned => LexerToken::Unsigned,
             LexerTokenKind::Void => LexerToken::Void,
@@ -421,8 +451,10 @@ pub const LEXER_TOKEN_KINDS: &[LexerTokenKind] = &[
     LexerTokenKind::LongConst,
     LexerTokenKind::UIntConst,
     LexerTokenKind::ULongConst,
+    LexerTokenKind::DoubleConst,
     LexerTokenKind::Int,
     LexerTokenKind::Long,
+    LexerTokenKind::Double,
     LexerTokenKind::Signed,
     LexerTokenKind::Unsigned,
     LexerTokenKind::Void,

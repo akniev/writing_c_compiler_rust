@@ -16,7 +16,8 @@ pub fn tokenize(input: &str) -> Vec<LexerToken> {
         let mut best_match: Option<(LexerTokenKind, usize)> = None;
         for token_kind in LEXER_TOKEN_KINDS {
             let pattern = token_kind.pattern();
-            if let Some(found) = pattern.find(remaining) {
+            if let Some(found) = pattern.captures(remaining) {
+                let found = found.get(1).unwrap_or_else(|| found.get(0).unwrap());
                 if found.start() == 0 {
                     let length = found.end();
                     if best_match.as_ref().is_none_or(|(_, best_length)| length >= *best_length) {
