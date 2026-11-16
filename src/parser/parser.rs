@@ -9,7 +9,7 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
 <function-declaration> ::= { <specifier> }+ <identifier> "(" <param-list> ")" ( <block> | ";" )
 <param-list> ::= "void"
                | {<type-specifier>}+ <identifier> { "," {<type-specifier>}+ <identifier> }
-<type-specifier> ::= "int" | "long" | "unsigned" | "signed"
+<type-specifier> ::= "int" | "long" | "unsigned" | "signed" | "double"
 <specifier> ::= <type-specifier> | "static" | "extern"
 <function> ::= "int" <identifier> "(" "void" ")" <block>
 <block> ::= "{" { <block-item> } "}"
@@ -42,12 +42,13 @@ use crate::parser::ast_tokens::ASTExpression::Conditional;
 <unop> ::= "-" | "~" | "++" | "--"
 <postfix> ::= ++ | --
 <binop> ::= "-" | "+" | "*" | "%" | "&" | "|" | "^" | "<<" | ">>" | "&&" | "||" | "==" | "!=" | "<" | "<=" | ">" | ">=" | = | += | -= | *= | /= | %=
-<const> ::= <int> | <long> | <uint> | <ulong>
+<const> ::= <int> | <long> | <uint> | <ulong> | <double>
 <identifier> ::= ? An identifier token ?
 <int> ::= ? An int token ?
 <long> ::= ? A int or long token ?
 <uint> ::= ? An unsigned int token ?
 <ulong> ::= ? An unsigned long token ?
+<double> ::= ? A floating-point constant token ?
  */
 
 struct Parser {
@@ -93,7 +94,7 @@ impl Parser {
             }
 
             match token {
-                LexerToken::Int | LexerToken::Long | LexerToken::Unsigned | LexerToken::Signed => {
+                LexerToken::Int | LexerToken::Long | LexerToken::Unsigned | LexerToken::Signed | LexerToken::Double => {
                     self.take();
                     type_specifiers.push(token);
                 }
@@ -113,7 +114,11 @@ impl Parser {
             panic!("Invalid type specifier");
         }
 
-        let _type = if type_specifiers.contains(&LexerToken::Unsigned) && type_specifiers.contains(&LexerToken::Long) {
+        let _type = if type_specifiers == vec![LexerToken::Double] {
+            ASTType::Double
+        } else if type_specifiers.contains(&LexerToken::Double) {
+            panic!("Invalid type specifier");
+        } else if type_specifiers.contains(&LexerToken::Unsigned) && type_specifiers.contains(&LexerToken::Long) {
             ASTType::ULong
         } else if type_specifiers.contains(&LexerToken::Unsigned) {
             ASTType::UInt
@@ -476,6 +481,14 @@ impl Parser {
                     _ => unreachable!("expected constant, found {const_token:?}"),
                 };
                 result = ASTExpression::Constant(ASTConstant::ULong(value as i128)).to_typed_without_type();
+            }
+            LexerToken::DoubleConst(_) => {
+                let const_token = self.expect(LexerTokenKind::DoubleConst);
+                let value = match const_token {
+                    LexerToken::DoubleConst(value) => value,
+                    _ => unreachable!("expected constant, found {const_token:?}"),
+                };
+                result = ASTExpression::Constant(ASTConstant::Double(value)).to_typed_without_type();
             }
             LexerToken::Identifier(_) if self.peek_n(1) == Some(LexerToken::OpenParen) => {
                 let function_call = self.parse_function_call();

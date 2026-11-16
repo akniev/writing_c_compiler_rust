@@ -255,7 +255,7 @@ impl LexerTokenKind {
             Self::Identifier => r"^[a-zA-Z_]\w*",
             Self::IntConst => r"([0-9]+)[^\w.]",
             Self::LongConst => r"([0-9]+[lL])[^\w.]",
-            Self::UIntConst => r"([0-9]+)[uU][^\w.]",
+            Self::UIntConst => r"([0-9]+[uU])[^\w.]",
             Self::ULongConst => r"([0-9]+([lL][uU]|[uU][lL]))[^\w.]",
             Self::DoubleConst => r"(([0-9]*\.[0-9]+|[0-9]+\.?)[Ee][+-]?[0-9]+|[0-9]*\.[0-9]+|[0-9]+\.)[^\w.]",
             Self::Int => r"^int\b",

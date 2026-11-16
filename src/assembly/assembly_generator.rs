@@ -427,6 +427,7 @@ impl TValue {
                     ASTConstant::Long(value) => ASMImmValue::Signed(*value),
                     ASTConstant::UInt(value) => ASMImmValue::Unsigned(*value),
                     ASTConstant::ULong(value) => ASMImmValue::Unsigned(*value),
+                    _ => panic!("Unsupported constant type"),
                 };
                 ASMOperand::Imm(value.clone())
             },
@@ -442,6 +443,7 @@ impl TValue {
                     ASTConstant::Long(_) => ASMType::Quadword,
                     ASTConstant::UInt(_) => ASMType::Longword,
                     ASTConstant::ULong(_) => ASMType::Quadword,
+                    _ => panic!("Unsupported constant type"),
                 }
             }
             TValue::Var(name) => {
@@ -458,6 +460,7 @@ impl TValue {
                     ASTConstant::Long(_) => true,
                     ASTConstant::UInt(_) => false,
                     ASTConstant::ULong(_) => false,
+                    _ => panic!("Unsupported constant type"),
                 }
             }
             TValue::Var(name) => {

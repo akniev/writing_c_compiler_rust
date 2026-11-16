@@ -140,7 +140,7 @@ fn typechecked_local_variable_declaration(
     } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
         let initial_value = if let Some(unwrapped) = variable_declaration.clone().init
             && let ASTExpression::Constant(init_val) = unwrapped.exp() {
-            let val = init_val.val();
+            let val = init_val.int_val();
             let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
             let static_init = get_static_init_from_constant(c);
             static_init
@@ -199,7 +199,7 @@ fn typechecked_file_scope_variable_declaration(
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTVariableDeclaration {
     let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.clone().init.map(|e| e.exp().clone()) {
-        let val = init_value.val();
+        let val = init_value.int_val();
         let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
         let static_init = get_static_init_from_constant(c);
         static_init
@@ -419,6 +419,7 @@ fn typechecked_expression(
                 ASTConstant::Long(_) => ASTType::Long,
                 ASTConstant::UInt(_) => ASTType::UInt,
                 ASTConstant::ULong(_) => ASTType::ULong,
+                ASTConstant::Double(_) => ASTType::Double,
             };
             expression.with_type(Some(c_type))
         }
@@ -583,6 +584,7 @@ fn get_static_init_from_constant(c: ASTConstant) -> SymbolInitialValue {
         ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
         ASTConstant::UInt(i) => SymbolInitialValue::Initial(StaticInit::UIntInit(i.clone())),
         ASTConstant::ULong(i) => SymbolInitialValue::Initial(StaticInit::ULongInit(i.clone())),
+        _ => panic!("Cannot get static init from constant"),
     }
 }
 

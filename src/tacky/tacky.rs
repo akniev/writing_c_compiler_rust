@@ -54,6 +54,7 @@ fn convert_symbols_to_tacky(ast_symbols: &HashMap<String, Symbol>) -> Vec<TTopLe
                             ASTType::FunType(_, _) => {
                                 panic!("Function type is not supported!");
                             },
+                            _ => panic!("Unsupported type!")
                         };
                         static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
                     },
@@ -92,6 +93,7 @@ fn parse_function(
         ASTType::FunType(_, _) => {
             panic!("Function type is not supported!");
         },
+        _ => panic!("Unsupported type!")
     };
     function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
     let t_function = TFunction {

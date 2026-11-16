@@ -74,6 +74,7 @@ impl ASTType {
             ASTType::UInt => ASMType::Longword,
             ASTType::ULong => ASMType::Quadword,
             ASTType::FunType(_, _) => panic!("Function type is not supported!"),
+            _ => panic!("Unsupported type!")
         }
     }
 }

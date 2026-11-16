@@ -8,7 +8,7 @@ variable_declaration = (identifier name, typed_exp? init,
                         type var_type, storage_class?)
 function_declaration = (identifier name, identifier* params, block? body,
                         type fun_type, storage_class?)
-type = Int | Long | UInt | ULong | FunType(type* params, type ret)
+type = Int | Long | UInt | ULong | Double | FunType(type* params, type ret)
 storage_class = Static | Extern
 for_init = InitDecl(variable_declaration) | InitExp(typed_exp?)
 statement = Return(typed_exp)
@@ -42,7 +42,7 @@ binary_operator = Add | Subtract | Multiply | Divide | Remainder
                 | BitwiseAnd | BitwiseOr | BitwiseXor | ShiftLeft
                 | ShiftRight | And | Or | Equal | NotEqual | LessThan
                 | GreaterThan | LessThanOrEqual | GreaterThanOrEqual
-const = ConstInt(int) | ConstLong(int) | ConstUInt(int) | ConstULong(int)
+const = ConstInt(int) | ConstLong(int) | ConstUInt(int) | ConstULong(int) | ConstDouble(double)
  */
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,6 +73,7 @@ pub enum ASTType {
     Long,
     UInt,
     ULong,
+    Double,
     FunType(Vec<Box<ASTType>>, Box<ASTType>),
 }
 
@@ -104,6 +105,7 @@ impl ASTType {
             ASTType::Long => 8,
             ASTType::UInt => 4,
             ASTType::ULong => 8,
+            ASTType::Double => 8,
             ASTType::FunType(_, _) => panic!("Function type is not supported!"),
         }
     }
@@ -114,6 +116,7 @@ impl ASTType {
             ASTType::Long => true,
             ASTType::UInt => false,
             ASTType::ULong => false,
+            ASTType::Double => true,
             ASTType::FunType(_, _) => panic!("Function type is not supported!"),
         }
     }
@@ -199,6 +202,7 @@ pub enum ASTConstant {
     Long(i128),
     UInt(i128),
     ULong(i128),
+    Double(f64),
 }
 
 impl ASTConstant {
@@ -212,12 +216,13 @@ impl ASTConstant {
         }
     }
 
-    pub fn val(&self) -> i128 {
+    pub fn int_val(&self) -> i128 {
         match self {
             ASTConstant::Int(i) => *i,
             ASTConstant::Long(i) => *i,
             ASTConstant::UInt(i) => *i,
             ASTConstant::ULong(i) => *i,
+            _ => panic!("Invalid constant type"),
         }
     }
 }

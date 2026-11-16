@@ -30,6 +30,7 @@ pub fn generate_backend_symbol_table(symbols: &HashMap<String, Symbol>) -> HashM
             ASTType::FunType(_, _) => {
                 ASMSymtabEntry::FunEntry { defined: symbol.identifier_attrs.is_defined() }
             }
+            _ => panic!("Unsupported type: {:?}", symbol._type),
         };
         backend_symbol_table.insert(sym_name, entry);
     }
