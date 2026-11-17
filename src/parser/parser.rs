@@ -785,86 +785,22 @@ impl ASTTypedExpression {
 
     pub fn converting_to(&self, exp_type: Option<ASTType>) -> ASTTypedExpression {
         let exp = self.exp.clone();
+        let Some(exp_type) = exp_type else {
+            panic!("expected type");
+        };
+
         match exp {
             ASTExpression::Constant(val) => {
                 ASTTypedExpression {
-                    exp: ASTExpression::Constant(val.converted_to(exp_type.clone())),
-                    exp_type,
+                    exp: ASTExpression::Constant(val.statically_converted(exp_type.clone())),
+                    exp_type: Some(exp_type),
                 }
             }
             _ => {
                 ASTTypedExpression {
-                    exp: ASTExpression::Cast { target_type: exp_type.clone().unwrap(), exp: Box::new(self.clone()) },
-                    exp_type,
+                    exp: ASTExpression::Cast { target_type: exp_type.clone(), exp: Box::new(self.clone()) },
+                    exp_type: Some(exp_type),
                 }
-            }
-        }
-    }
-}
-
-impl ASTConstant {
-    pub fn converted_to(&self, exp_type: Option<ASTType>) -> ASTConstant {
-        let Some(exp_type) = exp_type else {
-            panic!("No type specified!");
-        };
-
-        match (self, exp_type) {
-            (ASTConstant::Int(_), ASTType::Int) => {
-                self.clone()
-            }
-            (ASTConstant::Int(val), ASTType::Long) => {
-                ASTConstant::Long(*val)
-            }
-            (ASTConstant::Int(val), ASTType::UInt) => {
-                ASTConstant::UInt(u32::try_from(*val).unwrap() as i128)
-            }
-            (ASTConstant::Int(val), ASTType::ULong) => {
-                ASTConstant::ULong(*val)
-            }
-            (ASTConstant::Long(val), ASTType::Int) => {
-                ASTConstant::Int(*val % i64::from(i32::MAX) as i128)
-            }
-            (ASTConstant::Long(_), ASTType::Long) => {
-                self.clone()
-            }
-            (ASTConstant::Long(val), ASTType::UInt) => {
-                ASTConstant::UInt(u32::try_from(*val).unwrap() as i128)
-            }
-            (ASTConstant::Long(val), ASTType::ULong) => {
-                ASTConstant::ULong(*val as i128)
-            }
-            (ASTConstant::UInt(val), ASTType::Int) => {
-                ASTConstant::Int(*val % i64::from(i32::MAX) as i128)
-            }
-            (ASTConstant::UInt(val), ASTType::Long) => {
-                ASTConstant::Long(*val)
-            }
-            (ASTConstant::UInt(_), ASTType::UInt) => {
-                self.clone()
-            }
-            (ASTConstant::UInt(val), ASTType::ULong) => {
-                ASTConstant::ULong(*val)
-            }
-            (ASTConstant::ULong(val), ASTType::Int) => {
-                let mod_val = i32::MAX as i128;
-                let const_val = *val % mod_val;
-                ASTConstant::Int(const_val)
-            }
-            (ASTConstant::ULong(val), ASTType::Long) => {
-                let mod_val = i64::MAX as i128;
-                let const_val = *val % mod_val;
-                ASTConstant::Long(const_val)
-            }
-            (ASTConstant::ULong(val), ASTType::UInt) => {
-                let mod_val = u32::MAX as i128;
-                let const_val = val % mod_val;
-                ASTConstant::UInt(const_val)
-            }
-            (ASTConstant::ULong(_), ASTType::ULong) => {
-                self.clone()
-            }
-            (_, _) => {
-                panic!("Can't convert a constant {:?}", self);
             }
         }
     }

@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::iter::zip;
 use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTConstant, ASTDeclaration, ASTExpression, ASTForInit, ASTFunctionDeclaration, ASTProgram, ASTStatement, ASTStorageClass, ASTType, ASTTypedExpression, ASTUnaryOperator, ASTVariableDeclaration};
@@ -140,8 +141,7 @@ fn typechecked_local_variable_declaration(
     } else if variable_declaration.storage_class == Some(ASTStorageClass::Static) {
         let initial_value = if let Some(unwrapped) = variable_declaration.clone().init
             && let ASTExpression::Constant(init_val) = unwrapped.exp() {
-            let val = init_val.int_val();
-            let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
+            let c = init_val.clone().statically_converted(variable_declaration._type.clone());
             let static_init = get_static_init_from_constant(c);
             static_init
         } else if variable_declaration.init.is_none() {
@@ -199,8 +199,8 @@ fn typechecked_file_scope_variable_declaration(
     symbols: &mut HashMap<String, Symbol>
 ) -> ASTVariableDeclaration {
     let mut initial_value = if let Some(ASTExpression::Constant(init_value)) = variable_declaration.clone().init.map(|e| e.exp().clone()) {
-        let val = init_value.int_val();
-        let c = ASTConstant::typed_constant(val, variable_declaration._type.clone());
+        // We convert constant statically (not in runtime) for file scope variables' initializers.
+        let c = init_value.statically_converted(variable_declaration._type.clone());
         let static_init = get_static_init_from_constant(c);
         static_init
     } else if variable_declaration.init.is_none() {
@@ -425,6 +425,9 @@ fn typechecked_expression(
         }
         ASTExpression::Unary { op, exp } => {
             let t_inner_exp = typechecked_expression(exp.as_ref().clone(), symbols);
+            if matches!(op, ASTUnaryOperator::Complement) && t_inner_exp.exp_type == Some(ASTType::Double) {
+                panic!("Complement operator not supported on doubles");
+            }
             let n_exp = ASTExpression::Unary { op: op.clone(), exp: Box::new(t_inner_exp.clone()) };
             let exp_type = match op {
                 ASTUnaryOperator::Not => Some(ASTType::Int),
@@ -448,6 +451,11 @@ fn typechecked_expression(
             let t_e2 = typechecked_expression(e2.as_ref().clone(), symbols);
 
             let common_type = get_common_type(&t_e1.exp_type, &t_e2.exp_type);
+
+            if matches!(op, ASTBinaryOperator::Remainder) && common_type == Some(ASTType::Double) {
+                panic!("Remainder operator not supported on doubles");
+            }
+
             let result_type = match op {
                 ASTBinaryOperator::And
                 | ASTBinaryOperator::Or
@@ -563,6 +571,14 @@ fn get_common_type(t1: &Option<ASTType>, t2: &Option<ASTType>) -> Option<ASTType
         panic!("Cannot get common type of None");
     };
 
+    if *t1 == *t2 {
+        return Some(t1.clone());
+    }
+
+    if *t1 == ASTType::Double || *t2 == ASTType::Double {
+        return Some(ASTType::Double);
+    }
+
     if t1.size_in_bytes() == t2.size_in_bytes() {
         return if t1.is_signed() {
             Some(t2.clone())
@@ -584,7 +600,7 @@ fn get_static_init_from_constant(c: ASTConstant) -> SymbolInitialValue {
         ASTConstant::Long(i) => SymbolInitialValue::Initial(StaticInit::LongInit(i.clone())),
         ASTConstant::UInt(i) => SymbolInitialValue::Initial(StaticInit::UIntInit(i.clone())),
         ASTConstant::ULong(i) => SymbolInitialValue::Initial(StaticInit::ULongInit(i.clone())),
-        _ => panic!("Cannot get static init from constant"),
+        ASTConstant::Double(f) => SymbolInitialValue::Initial(StaticInit::DoubleInit(f.clone())),
     }
 }
 
@@ -651,6 +667,7 @@ pub enum StaticInit {
     LongInit(i128),
     UIntInit(i128),
     ULongInit(i128),
+    DoubleInit(f64),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -660,12 +677,13 @@ pub struct FunctionInfo {
 }
 
 impl StaticInit {
-    pub fn value(&self) -> i128 {
+    pub fn int_value(&self) -> i128 {
         match self {
             StaticInit::IntInit(val) => *val,
             StaticInit::LongInit(val) => *val,
             StaticInit::UIntInit(val) => *val,
             StaticInit::ULongInit(val) => *val,
+            _ => panic!("Only integer values are supported")
         }
     }
 }

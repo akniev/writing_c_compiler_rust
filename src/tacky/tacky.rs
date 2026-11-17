@@ -416,8 +416,8 @@ fn emit_tacky(
                 panic!("Wrong type!");
             };
             let increment = match op.clone() {
-                ASTPostfixOperator::Increment => TValue::Constant(ASTConstant::typed_constant(1, exp_type.clone())),
-                ASTPostfixOperator::Decrement => TValue::Constant(ASTConstant::typed_constant(-1, exp_type.clone())),
+                ASTPostfixOperator::Increment => TValue::Constant(ASTConstant::typed_int_constant(1, exp_type.clone())),
+                ASTPostfixOperator::Decrement => TValue::Constant(ASTConstant::typed_int_constant(-1, exp_type.clone())),
             };
             let var = emit_tacky(exp.as_ref(), instructions, symbols);
             let tmp = TValue::Var(make_temporary(typed_exp.exp_type.clone(), symbols));

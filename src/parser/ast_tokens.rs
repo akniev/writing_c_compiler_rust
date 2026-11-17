@@ -206,12 +206,31 @@ pub enum ASTConstant {
 }
 
 impl ASTConstant {
-    pub fn typed_constant(i: i128, t: ASTType) -> ASTConstant {
+    pub fn statically_converted(self, t: ASTType) -> ASTConstant {
+        match self {
+            ASTConstant::Double(f) => Self::typed_double_constant(f, t),
+            _ => Self::typed_int_constant(self.int_val(), t),
+        }
+    }
+
+    pub fn typed_int_constant(i: i128, t: ASTType) -> ASTConstant {
         match t {
             ASTType::Int => ASTConstant::Int((i as i32) as i128),
             ASTType::Long => ASTConstant::Long((i as i64) as i128),
             ASTType::UInt => ASTConstant::UInt((i as u32) as i128),
             ASTType::ULong => ASTConstant::ULong((i as u64) as i128),
+            ASTType::Double => ASTConstant::Double(i as f64),
+            _ => panic!("Invalid constant type"),
+        }
+    }
+
+    pub fn typed_double_constant(d: f64, t: ASTType) -> ASTConstant {
+        match t {
+            ASTType::Double => ASTConstant::Double(d),
+            ASTType::Int => ASTConstant::Int((d as i32) as i128),
+            ASTType::UInt => ASTConstant::Int((d as u32) as i128),
+            ASTType::Long => ASTConstant::Int((d as i64) as i128),
+            ASTType::ULong => ASTConstant::Int((d as u64) as i128),
             _ => panic!("Invalid constant type"),
         }
     }

@@ -62,6 +62,7 @@ impl StaticInit {
             StaticInit::LongInit(_) => ASMType::Quadword,
             StaticInit::UIntInit(_) => ASMType::Longword,
             StaticInit::ULongInit(_) => ASMType::Quadword,
+            _ => panic!("Unsupported type!")
         }
     }
 }

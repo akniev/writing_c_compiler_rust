@@ -33,7 +33,7 @@ fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, re
             if global {
                 result.push_str(&format!("  .globl {}\n", name))
             }
-            if init.value() == 0 {
+            if init.int_value() == 0 {
                 result.push_str("  .bss\n");
                 result.push_str(&format!("  .align {}\n", alignment));
                 result.push_str(&format!("{}:\n", name));
@@ -55,6 +55,7 @@ fn print_top_level(top_level: ASMTopLevel, symbols: &HashMap<String, Symbol>, re
                     StaticInit::ULongInit(val) => {
                         result.push_str(&format!("  .quad {}\n", val));
                     }
+                    _ => panic!("Unsupported type!")
                 }
 
             }
