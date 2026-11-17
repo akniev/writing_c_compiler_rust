@@ -110,13 +110,13 @@ impl ASTType {
         }
     }
     
-    pub fn is_signed(&self) -> bool {
+    pub fn is_signed_int(&self) -> bool {
         match self {
             ASTType::Int => true,
             ASTType::Long => true,
             ASTType::UInt => false,
             ASTType::ULong => false,
-            ASTType::Double => true,
+            ASTType::Double => panic!("Double type is not a signed integer type!"),
             ASTType::FunType(_, _) => panic!("Function type is not supported!"),
         }
     }

@@ -412,6 +412,7 @@ fn asm_instructions(body: Vec<TInstruction>, symbols: &HashMap<String, Symbol>) 
                     }
                 ].as_mut());
             },
+            _ => panic!("Unsupported instruction"),
         }
     }
 
@@ -464,7 +465,7 @@ impl TValue {
                 }
             }
             TValue::Var(name) => {
-                symbols[name]._type.is_signed()
+                symbols[name]._type.is_signed_int()
             }
         }
     }

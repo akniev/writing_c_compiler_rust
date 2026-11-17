@@ -580,7 +580,7 @@ fn get_common_type(t1: &Option<ASTType>, t2: &Option<ASTType>) -> Option<ASTType
     }
 
     if t1.size_in_bytes() == t2.size_in_bytes() {
-        return if t1.is_signed() {
+        return if t1.is_signed_int() {
             Some(t2.clone())
         } else {
             Some(t1.clone())

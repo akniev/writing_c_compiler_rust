@@ -3,6 +3,7 @@ use crate::parser::ast_tokens::{ASTBinaryOperator, ASTBlock, ASTBlockItem, ASTCo
 use crate::tacky::tacky_tokens::{TBinaryOperator, TFunction, TInstruction, TProgram, TStaticVariable, TTopLevel, TUnaryOperator, TValue};
 
 use crate::common::global_counter::{get_global_counter};
+use crate::parser::ast_tokens::ASTType::Double;
 use crate::parser::parse_switches::SwitchMetadata;
 use crate::parser::typechecker::{StaticInit, Symbol, SymbolAttrs, SymbolInitialValue};
 
@@ -51,10 +52,10 @@ fn convert_symbols_to_tacky(ast_symbols: &HashMap<String, Symbol>) -> Vec<TTopLe
                             ASTType::Long => StaticInit::LongInit(0),
                             ASTType::UInt => StaticInit::UIntInit(0),
                             ASTType::ULong => StaticInit::ULongInit(0),
+                            ASTType::Double => StaticInit::DoubleInit(0.0),
                             ASTType::FunType(_, _) => {
                                 panic!("Function type is not supported!");
                             },
-                            _ => panic!("Unsupported type!")
                         };
                         static_vars.push(TStaticVariable { name: symbol_name.clone(), global, init: init_val.clone() } );
                     },
@@ -90,10 +91,10 @@ fn parse_function(
         ASTType::Long => ASTConstant::Long(0),
         ASTType::UInt => ASTConstant::UInt(0),
         ASTType::ULong => ASTConstant::ULong(0),
+        ASTType::Double => ASTConstant::Double(0.0),
         ASTType::FunType(_, _) => {
             panic!("Function type is not supported!");
         },
-        _ => panic!("Unsupported type!")
     };
     function_instructions.push(TInstruction::Return(TValue::Constant(init_val)));
     let t_function = TFunction {
@@ -464,6 +465,8 @@ fn emit_tacky(
             let Some(inner_type) = exp.exp_type.clone() else {
                 panic!("Wrong type!");
             };
+
+            // If the types are the same, there's nothing to do
             if target_type.clone() == inner_type {
                 return result;
             }
@@ -471,11 +474,25 @@ fn emit_tacky(
 
             let dst = TValue::Var(dst_name);
 
-            if target_type.size_in_bytes() == inner_type.size_in_bytes() {
+            // If the types are different, we need to cast
+
+            if inner_type == Double { // Double to Int/UInt
+                if target_type.is_signed_int() {
+                    instructions.push(TInstruction::DoubleToInt { src: result, dst: dst.clone() });
+                } else {
+                    instructions.push(TInstruction::DoubleToUInt { src: result, dst: dst.clone() });
+                }
+            } else if target_type == Double { // Int/UInt to Double
+                if inner_type.is_signed_int() {
+                    instructions.push(TInstruction::IntToDouble { src: result, dst: dst.clone() });
+                } else {
+                    instructions.push(TInstruction::UIntToDouble { src: result, dst: dst.clone() });
+                }
+            } else if target_type.size_in_bytes() == inner_type.size_in_bytes() { // Int/UInt to Int/UInt
                 instructions.push(TInstruction::Copy { src: result, dst: dst.clone() });
             } else if target_type.size_in_bytes() < inner_type.size_in_bytes() {
                 instructions.push(TInstruction::Truncate { src: result, dst: dst.clone() });
-            } else if inner_type.is_signed() {
+            } else if inner_type.is_signed_int() {
                 instructions.push(TInstruction::SignExtend { src: result, dst: dst.clone() });
             } else {
                 instructions.push(TInstruction::ZeroExtend { src: result, dst: dst.clone() });
